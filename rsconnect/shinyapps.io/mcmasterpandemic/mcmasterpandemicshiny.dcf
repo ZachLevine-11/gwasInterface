@@ -1,0 +1,10 @@
+name: mcmasterpandemicshiny
+title:
+username:
+account: mcmasterpandemic
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2729325
+bundleId: 3576195
+url: https://mcmasterpandemic.shinyapps.io/mcmasterpandemicshiny/
+when: 1598888166.79362

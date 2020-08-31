@@ -9,6 +9,18 @@ Description: Shiny app for McMasterPandemic.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-Imports: McMasterPandemic, dplyr, ggplot2, anytime, directlabels, scales, stringr, shiny, shinyWidgets, shinythemes
+Imports: 
+    McMasterPandemic,
+    golem,
+    dplyr,
+    ggplot2,
+    anytime,
+    directlabels,
+    scales,
+    stringr,
+    shiny,
+    shinyWidgets,
+    shinythemes,
+    pkgload
 Remotes: https://github.com/bbolker/McMasterPandemic
 RoxygenNote: 7.1.0

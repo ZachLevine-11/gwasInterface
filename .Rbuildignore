@@ -1,2 +1,4 @@
+^rsconnect$
+^app\.R$
 ^.*\.Rproj$
 ^\.Rproj\.user$
