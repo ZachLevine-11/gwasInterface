@@ -422,7 +422,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
         useTimeChanges <- grabbedPars[["useTimeChanges"]]
         if (!useTimeChanges || ! "beta0" %in% time_pars$Symbol){
           ##Weight by the fraction of susceptibles.
-          R0Vec <- get_R0(params)*get_sim()$S/makeParams()[["N"]]
+          R0Vec <- get_R0(params)*(get_sim()$S/makeParams()[["N"]])**(makeParams()[["zeta"]] + 1)
           plotDf <- data.frame("Rt" = R0Vec, "Date" = get_sim()$date, stringsAsFactors = FALSE)
         }
         else{
@@ -432,7 +432,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
             return(get_R0(newParams))
           })
           ##Weight by the fraction of susceptibles.
-          R0Vec <- R0Vec * get_sim()$S/makeParams()[["N"]]
+          R0Vec <- R0Vec * (get_sim()$S/makeParams()[["N"]])**(makeParams()[["zeta"]] + 1)
           plotDf <- data.frame("Rt" = R0Vec, "Date" = get_sim()$date, stringsAsFactors = FALSE)
         }
         plotDf <- plotDf[order(plotDf$Date),]
