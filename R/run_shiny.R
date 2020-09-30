@@ -56,7 +56,6 @@ default.parameter.file <- "ICU1.csv"
 default.start.date <- "2020-01-01"
 default.dropstates <- c("t","S","E","I","X")
 timeunitParams <- c("sigma", "gamma_a", "gamma_m", "gamma_s", "gamma_p", "rho")
-defaultTCParams <- data.frame("Date" = anytime::anydate(c("2020-02-20", "2020-03-20", "2020-04-02")), "Symbol"  = c("beta0", "beta0", "alpha"), "Relative_value"= c(1,1,1), stringsAsFactors = FALSE)
 beta0 <- 1
 
 ##' Run the McMasterPandemic Shiny
@@ -71,6 +70,7 @@ beta0 <- 1
 ##' @importFrom shinythemes shinytheme
 ##' @importFrom anytime anytime
 ##' @importFrom stringr str_length
+##' @importFrom lubridate ymd
 ##' @importFrom directlabels direct.label
 ##' @importFrom scales log10_trans trans_breaks trans_format math_format
 ##' @importFrom shinyWidgets prettyCheckbox setBackgroundColor
@@ -158,19 +158,23 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
         ##So keep the default to be the parametersPanel to avoid ugly errors.
         selected = "plotaes",
         tabPanel(
-          title = "Time changing transmission rates",
+          title = "Time-varying transmission rates",
           value = "tcr",
           textOutput("trmsg"),
-          br(),
-          br(),
-          textInput("timeParsDates", label = "Dates of changes, separated by commas", placeholder = "2020-02-20, 2020-03-20, 2020-04-02", value = "2020-02-20, 2020-03-20, 2020-04-02"),
-          textInput("timeParsSymbols", label = "Parameter to change on each date", placeholder = "beta0, beta0, alpha", value = "beta0, beta0, alpha"),
-          textInput("timeParsRelativeValues", label = "Relative change on each date", placeholder = "1, 1, 1", value = "1, 1, 1"),
-          plotOutput("paramsPlot")
+          checkboxInput("useVarying", label = "Simulate with time-varying transmission rates", value = FALSE),
+          conditionalPanel(condition = "input.useVarying",
+            br(),
+            br(),
+            ##Default time point is two months into the simulation.
+            textInput("timeParsDates", label = "Dates of changes, separated by commas", value = paste(lubridate::ymd(input$sd) + months(2), lubridate::ymd(input$sd) + months(4), lubridate::ymd(input$sd) + months(4), sep = ",")),
+            textInput("timeParsSymbols", label = "Parameter to change on each date", value = "beta0, beta0, alpha"),
+            textInput("timeParsRelativeValues", label = "Relative change on each date", value = "0.5, 0.75, 1.1"),
+            plotOutput("paramsPlot")
+          )
         ),
         tabPanel(title = "Process and Observation error",
                  value = "procObsErr",
-                 checkboxInput("useNoise", label = "Use noise", value = FALSE),
+                 checkboxInput("useNoise", label = "Simulate with noise", value = FALSE),
                 conditionalPanel(condition = "input.useNoise",
                   sliderInput("ObsError", label = "Shape parameter for observation noise", min = 0, max = 1000, step = 1, value = 100),
                   sliderInput("procError", label = "Shape parameter for process noise", min = 0, max = 1, step = 0.01, value = 0.5),
@@ -231,7 +235,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     })
     get_factor_timePars <- function(){
       if(is.null(input$timeParsRelativeValues)){
-        currentPars <- defaultTCParams
+        currentPars <- NULL
       }
       else{
         relValues <- as.numeric(unlist(strsplit(input$timeParsRelativeValues, "\\,")))
@@ -242,21 +246,13 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
       return(currentPars)
     }
     dp_1 <- describe_params(read_params("ICU1.csv"))
-    output$trmsg <- renderText({"Transmission rate is constant by default but can be changed. You can have any number of parameters."})
+    output$trmsg <- renderText({"Transmission rates are constant by default, but can be changed. You can change any number of parameters any number of times."})
     ##Collect time changing parameters and detect changed from default value.
     get_timePars <- reactive({
       set.seed(5)
       ##Detect changes from default values for time-changing transmission rates, and apply these changes in the simulation.
       time_pars <- get_factor_timePars()
-      ##If the length was changed from the default length, the parameters were definetly changed.
-      if(nrow(time_pars) != nrow(defaultTCParams)){
-        useTimeChanges <- TRUE
-      }
-      else{
-        ##Are there any elements different from their default values?
-        useTimeChanges <- sum(time_pars != defaultTCParams) != 0
-      }
-      return(list("time_pars" = time_pars, "useTimeChanges" = useTimeChanges))
+      return(list("time_pars" = time_pars, "useTimeChanges" = input$useVarying))
     })
     ##Run a pandemic simulation based on the inputs in the shiny.
     get_sim <- reactive({
@@ -677,7 +673,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
       output$endDate <- renderUI({
         dateInput(inputId = "ed",
                   label = "End date",
-                  value = toString(anytime::anydate(input$sd) + 30*5),
+                  value = toString(anytime::anydate(input$sd) + 30*9),
                   min = toString(anytime::anydate(input$sd) + 1),
                   max = toString(anytime::anydate(input$sd) + 5*365))
       })

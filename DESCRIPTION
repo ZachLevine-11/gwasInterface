@@ -21,6 +21,7 @@ Imports:
     shiny,
     shinyWidgets,
     shinythemes,
-    pkgload
+    pkgload,
+    lubridate
 Remotes: https://github.com/bbolker/McMasterPandemic
 RoxygenNote: 7.1.0
