@@ -428,13 +428,23 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
           plotDf <- data.frame("Rt" = R0Vec, "Date" = get_sim()$date, stringsAsFactors = FALSE)
         }
         else{
-          #For each beta(t) value, create a corresponding params element and estimate R0.
+          ##For each beta(t) value, create a corresponding params element and estimate R0.
           R0Vec <- sapply(time_pars[time_pars$Symbol == "beta0", "Relative_value"], function(betaValue){
             newParams <- update(params, c(beta0 = betaValue))
             return(get_R0(newParams))
           })
           ##Weight by the fraction of susceptibles.
-          R0Vec <- R0Vec * (get_sim()$S/makeParams()[["N"]])**(makeParams()[["zeta"]] + 1)
+          ##For each R0, repeat it to match the simulation.
+          beta0Dates <- time_pars[time_pars$Symbol == "beta0", "Date"]
+          i <- 1
+          j <- 0
+          newR0Vec <- c()
+          while (i <= length(R0Vec)){
+            newR0Vec <- c(newR0Vec, rep(R0Vec[i], min(which(get_sim()$date == beta0Dates[i])) - j))
+            j <- min(which(get_sim()$date == beta0Dates[i]))
+            i <- i + 1
+          }
+          R0Vec <- newR0Vec * (get_sim()$S/makeParams()[["N"]])**(makeParams()[["zeta"]] + 1)
           plotDf <- data.frame("Rt" = R0Vec, "Date" = get_sim()$date, stringsAsFactors = FALSE)
         }
         plotDf <- plotDf[order(plotDf$Date),]
