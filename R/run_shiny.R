@@ -168,13 +168,16 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
           textInput("timeParsRelativeValues", label = "Relative change on each date", placeholder = "1, 1, 1", value = "1, 1, 1"),
           plotOutput("paramsPlot")
         ),
-        tabPanel(
-          title = "Process and Observation error",
-          value = "procObsErr",
-          sliderInput("ObsError", label = "Observation error", min = 0, max = 500, step = 1, value = 0),
-          sliderInput("procError", label = "Process error", min = 0, max = 1, step = 0.01, value = 0),
-          textOutput("explanationTitle"),
-          textOutput("errorExplanations")),
+        tabPanel(title = "Process and Observation error",
+                 value = "procObsErr",
+                 checkboxInput("useNoise", label = "Use noise", value = FALSE),
+                conditionalPanel(condition = "input.useNoise",
+                  sliderInput("ObsError", label = "Shape parameter for observation noise", min = 0, max = 1000, step = 1, value = 100),
+                  sliderInput("procError", label = "Shape parameter for process noise", min = 0, max = 1, step = 0.01, value = 0.5),
+                  textOutput("explanationTitle"),
+                  textOutput("errorExplanations")
+                )
+          ),
         tabPanel(
           title = "Plot aesthetics",
           value = "plotaes",
@@ -186,7 +189,6 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                       min = 0, max = 10,
                       step = 0.25,
                       value = 3),
-
           radioButtons(inputId = "scale",
                        label = "Scaling options",
                        choices = c("none",
@@ -263,12 +265,16 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
       useTimeChanges <- grabbedPars[["useTimeChanges"]]
       ##Make the params.
       params <- makeParams()
-      params <- update(params, c(proc_disp = as.numeric(input$procError), obs_disp = as.numeric(input$ObsError)))
-      if (useTimeChanges){
-        sim = run_sim(params, start_date = anytime::anydate(input$sd), end_date = anytime::anydate(input$ed), stoch = c(obs = input$ObsError != "0", proc = input$procError != "0"), params_timevar = time_pars)
+      if (input$useNoise){
+        params <- update(params, c(proc_disp = as.numeric(input$procError), obs_disp = as.numeric(input$ObsError)))
       }
       else{
-        sim = run_sim(params, start_date = anytime::anydate(input$sd), end_date = anytime::anydate(input$ed), stoch = c(obs = input$ObsError != "0", proc = input$procError != "0"))
+      }
+      if (useTimeChanges){
+        sim = run_sim(params, start_date = anytime::anydate(input$sd), end_date = anytime::anydate(input$ed), stoch = c(obs = input$useNoise, proc = input$useNoise), params_timevar = time_pars)
+      }
+      else{
+        sim = run_sim(params, start_date = anytime::anydate(input$sd), end_date = anytime::anydate(input$ed), stoch = c(obs = input$useNoise, proc = input$useNoise))
       }
       return(sim)
     })
