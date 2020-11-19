@@ -560,6 +560,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
       fileName <-  input$uploadData[["datapath"]]
       params <- read_params(fileName)
       updateSliderInput(session, "fixedr", value = get_R0(params))
+      updateSliderInput(session, "fixedgbar", value = get_Gbar(params))
     })
     ##Manage the states to drop.
     getDropStates <- function(){
