@@ -109,9 +109,13 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                     sidebarPanel(id = "sidebar", width = 4,
                                  fluidRow(
                                    selectInput("fn",
-                                               label = "Parameter file:",
+                                               label = "Sample parameter file:",
                                                choices = parameter.files, selected = default.parameter.file),
                                    downloadButton("downloadData", "Download sample parameter file", class = "dbutton"),
+
+                                   downloadButton("downloadOwnData", "Download current parameters", class = "dbutton"),
+
+
                                    fileInput("uploadData", "Upload custom parameter file")
                                  ),
                                  fluidRow(
@@ -331,6 +335,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
           paramValue <- eval(parse(text = paste0("input$", param)))
         }
         #Reparametrize time params so the user can enter them in as times rather than rates, to be more intuitive.
+        ##Load from file if the slot is null at start up, or if we just selected the file.
         if (param %in% timeunitParams){
           if (is.null(paramValue) || is.na(paramValue)){
             paramValue <- loadParams(param)
@@ -344,6 +349,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
         }
         ##Not a time unit param.
         else{
+          ##Load from file if the slot is null at start up, or if we just selected the file.
           if (is.null(paramValue) || is.na(paramValue)){
             paramValue <- loadParams(param)
             params <- c(params, paramValue)
@@ -549,6 +555,12 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
         })
       }
     )
+    ##Update the slider for R0 when we read in a file and beta0 has been changed.
+    observeEvent(input[["uploadData"]], {
+      fileName <-  input$uploadData[["datapath"]]
+      params <- read_params(fileName)
+      updateSliderInput(session, "fixedr", value = get_R0(params))
+    })
     ##Manage the states to drop.
     getDropStates <- function(){
       default.sim <- run_sim(read_params("ICU1.csv"))
@@ -645,33 +657,49 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
         return(tags$style(tag))
       })
     })
+    ##Read in a csv file, copying the logic in read_params using ICU1.csv.
+    read_in_csv <- function(){
+      ##Read in ICU1.csv, copying the logic in read_params using ICU1.csv.
+      basicTemplate <- read.csv(system.file("params",
+                                            "ICU1.csv",
+                                            package = "McMasterPandemic"),
+                                colClasses="character",
+                                stringsAsFactors=FALSE,
+                                comment.char="#",
+                                na.strings="variable")
+      ## evaluate to allow expressions like "1/7" -> numeric
+      basicTemplate[["Value"]] <- vapply(basicTemplate[["Value"]], function(z) eval(parse(text=z)), numeric(1))
+      res <- setNames(basicTemplate[["Value"]],basicTemplate[["Symbol"]])
+      class(res) <- "params_pansim"
+      if ("Symbol" %in% names(basicTemplate)) {
+        attr(res,"description") <- setNames(basicTemplate[["Parameter"]],x[["Symbol"]])
+      }
+      else{
+      }
+      return(basicTemplate)
+    }
+
     ##Handle downloads for the sample template csv file.
     ##The file is an empty version of ICU1.csv so it scales as more parameters are added.
     output$downloadData <- downloadHandler(
       filename = function(){return("sampleparams.csv")},
       content = function(file) {
-        ##Read in ICU1.csv, copying the logic in read_params using ICU1.csv.
-        basicTemplate <- read.csv(system.file("params",
-                                              "ICU1.csv",
-                                              package = "McMasterPandemic"),
-                                  colClasses="character",
-                                  stringsAsFactors=FALSE,
-                                  comment.char="#",
-                                  na.strings="variable")
-        ## evaluate to allow expressions like "1/7" -> numeric
-        basicTemplate[["Value"]] <- vapply(basicTemplate[["Value"]], function(z) eval(parse(text=z)), numeric(1))
-        res <- setNames(basicTemplate[["Value"]],basicTemplate[["Symbol"]])
-        class(res) <- "params_pansim"
-        if ("Symbol" %in% names(basicTemplate)) {
-          attr(res,"description") <- setNames(basicTemplate[["Parameter"]],x[["Symbol"]])
-        }
-        ##Clear the values column.
-        values <- read_params("PHAC.csv")
-        basicTemplate$Value <- values
-        ##Write it back out.
+        basicTemplate <- read_in_csv()
+        ##Default the values column.
+        basicTemplate$Value <- read_params("PHAC.csv")
         write.csv(basicTemplate, file, row.names = FALSE)
       }
     )
+    ##Handle downloads for the parameters entered by the user.
+    output$downloadOwnData <- downloadHandler(
+      filename = function(){return("customparams.csv")},
+      content = function(file) {
+        basicTemplate <- read_in_csv()
+        basicTemplate$Value <- makeParams()
+        write.csv(basicTemplate, file, row.names = FALSE)
+      }
+    )
+
     output$summaryTitle <- renderText({"Summary characteristics"})
     output$explanationTitle <- renderText({"Explanation"})
     output$errorExplanations <- renderText({"Use these options to simulate noise in the data. The observation error parameter is the dispersion parameter for a negative binomial distribution. A suitable value could be 200.
