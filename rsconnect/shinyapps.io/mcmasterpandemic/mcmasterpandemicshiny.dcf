@@ -5,6 +5,6 @@ account: mcmasterpandemic
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2729325
-bundleId: 3882388
+bundleId: 3891661
 url: https://mcmasterpandemic.shinyapps.io/mcmasterpandemicshiny/
-when: 1605824038.27379
+when: 1606070171.56647

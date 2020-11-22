@@ -535,23 +535,34 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
       else{
         theVal <- loadParams(param)
       }
+      if (param == "N"){
+        theStep <- 1
+      }
+      else{
+        theStep <- 0.1
+      }
       ##Both are instantiated to the value given in the file.
       return(list(fluidRow(column(width = 10, renderText(sliderLabel)),
                            column(width = 3, textInput(inputId = paste(param, "_manual", sep = ""),
                                                        label = "",
                                                        value = theVal))),
-                  sliderInput(param, label = "", value = theVal, min = 0, max = maxVal, step = 0.1)))
+                  sliderInput(param, label = "", value = theVal, min = 0, max = maxVal, step = theStep)))
     }
     ##Use a pair of twin event observers to keep the values of the manual entry and sliders in sync.
     ##Using vectorized operations, for each param, check if either the slider or the text input has been changed, and if it has, adjust the other one to match.
     lapply(
       X = names(read_params("ICU1.csv"))[names(read_params("ICU1.csv")) != "beta0"],
       FUN = function(paramName){
-        observeEvent(input[[paste0(paramName, "_manual")]], {
-          updateSliderInput(session, paramName, value = eval(parse(text = paste0("input$", paramName, "_manual"))))
-        })
         observeEvent(input[[paste0(paramName)]], {
-          updateTextInput(session, paste0(paramName, "_manual"), value = eval(parse(text = paste0("input$", paramName))))
+          ##Only change if the two are different
+          if (input[[paste0(paramName, "_manual")]] != eval(parse(text = paste0("input$", paramName)))){
+            updateTextInput(session, paste0(paramName, "_manual"), value = eval(parse(text = paste0("input$", paramName))))
+          }
+        })
+        observeEvent(input[[paste0(paramName, "_manual")]], {
+          if (input[[paste0(paramName, "_manual")]] != eval(parse(text = paste0("input$", paramName)))){
+            updateSliderInput(session, paramName, value = eval(parse(text = paste0("input$", paramName, "_manual"))))
+          }
         })
       }
     )
