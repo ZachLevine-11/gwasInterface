@@ -260,16 +260,16 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     })
     ##Run a pandemic simulation based on the inputs in the shiny.
     get_sim <- reactive({
-      grabbedPars <- get_timePars()
-      time_pars <- grabbedPars[["time_pars"]]
-      useTimeChanges <- grabbedPars[["useTimeChanges"]]
-      ##Make the params.
       params <- makeParams()
       if (input$useNoise){
         params <- update(params, c(proc_disp = as.numeric(input$procError), obs_disp = as.numeric(input$ObsError)))
       }
       else{
       }
+      grabbedPars <- get_timePars()
+      time_pars <- grabbedPars[["time_pars"]]
+      ##Make the params.
+      useTimeChanges <- grabbedPars[["useTimeChanges"]]
       if (useTimeChanges){
         sim = run_sim(params, start_date = anytime::anydate(input$sd), end_date = anytime::anydate(input$ed), stoch = c(obs = input$useNoise, proc = input$useNoise), params_timevar = time_pars)
       }
