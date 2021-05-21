@@ -276,6 +276,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
       else{
         sim = run_sim(params, start_date = anytime::anydate(input$sd), end_date = anytime::anydate(input$ed), stoch = c(obs = input$useNoise, proc = input$useNoise))
       }
+      ##Add a curve for prevalence
+      sim$prevalence <- sim$I + sim$E
       return(sim)
     })
     ##Set the plot width based on the length of the simulation.
@@ -576,6 +578,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     ##Manage the states to drop.
     getDropStates <- function(){
       default.sim <- run_sim(read_params("ICU1.csv"))
+      default.sim$prevalence <- default.sim$I + default.sim$E
+      ##Add a column for prevalence
       couldDropStates <- setdiff(colnames(default.sim)[2:length(default.sim)], default.dropstates)
       for (state in couldDropStates){
         stateVal <- eval(parse(text = paste0("input$", state)))
@@ -632,6 +636,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     create_togglePanel <- function(){
       ##Exclude the date as that's not a curve.
       defsim <- run_sim(read_params("ICU1.csv"))
+      ##Add a column for prevalence
+      defsim$prevalence <- defsim$I + defsim$E
       curves <- as.vector(colnames(defsim)[2:length(defsim)])
       ##Ignore curves that we're never going to show.
       curves <- setdiff(curves, c("t","S","E","I","X"))
@@ -659,6 +665,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     output$colourManager <- renderUI({
       ##Grab all the curves.
       defsim <- run_sim(read_params("ICU1.csv"))
+      defsim$prevalence <- defsim$I + defsim$E
       curvesList <- as.vector(colnames(defsim)[2:length(defsim)])
       ##Remove the ones we're going to drop.
       curvesList <- setdiff(curvesList, getDropStates())
