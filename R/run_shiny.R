@@ -601,7 +601,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     ##Create checkbuttons to display plots or not.
     checkButton_curve <- function(curve){
       #Don't show cum rep by default
-      if (curve == "cumRep" || curve == "foi" || curve ==  "R" || curve == "incidence"){
+      if (curve == "cumRep" || curve == "foi" || curve ==  "R" || curve == "incidence" || curve == "prevalence"){
         showByDefault <- FALSE
       }
       else{
