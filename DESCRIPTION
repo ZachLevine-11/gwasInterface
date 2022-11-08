@@ -1,27 +1,14 @@
-Package: McMasterPandemicShiny
+Package: SegalGwas
 Type: Package
-Title: Shiny App for McMasterPandemic
+Title: Shiny App for Segal Gwas
 Version: 0.1.0
 Author: Zachary Levine
-Maintainer: Zachary Levine <levinez@mcmaster.ca>
+Maintainer: Zachary Levine <zachary.levine@weizmann.ac.il>
 Description: Shiny app for McMasterPandemic.
     Supports deployment to ShinyApps.io
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-Imports: 
-    McMasterPandemic,
-    golem,
-    dplyr,
-    ggplot2,
-    anytime,
-    directlabels,
-    scales,
-    stringr,
-    shiny,
-    shinyWidgets,
-    shinythemes,
-    pkgload,
-    lubridate
-Remotes: https://github.com/bbolker/McMasterPandemic
+Imports:
+Remotes: 
 RoxygenNote: 7.1.0
