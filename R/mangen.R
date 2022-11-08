@@ -27,7 +27,6 @@ make_all_gwas_plots_individual <- function(){
     for (long_filename in all_gwases){
     if (endsWith(long_filename, ".clumped")){
       gwas <- read_clumped(paste0(basepath, long_filename))
-      print(head(gwas))
       if (length(gwas$P) != 0){
         if (nrow(gwas[gwas$P < (5*10**(-8))/numGwases,]) != 0){
           jpeg(stringr::str_replace_all(paste0(figpath_individual, long_filename, ".jpg"), "%", ""))
@@ -41,54 +40,6 @@ make_all_gwas_plots_individual <- function(){
       }
     }
   }
-}
-
-##from https://danielroelfs.com/blog/how-i-create-manhattan-plots-using-ggplot/
-ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot"){
-  gwas_data$p <- gwas_data$P
-  gwas_data$chr <- gwas_data$X.CHROM
-  gwas_data$bp <- gwas_data$POS
-  library(ggplot2)
-  library(dplyr)
-  data_cum <- gwas_data %>%
-    group_by(chr) %>%
-    summarise(max_bp = max(bp)) %>%
-    mutate(bp_add = lag(cumsum(as.numeric(max_bp)), default = 0)) %>%
-    select(chr, bp_add)
-
-  gwas_data <- gwas_data %>%
-    inner_join(data_cum, by = "chr") %>%
-    mutate(bp_cum = bp + bp_add)
-  axis_set <- gwas_data %>%
-    group_by(chr) %>%
-    summarize(center = mean(bp_cum))
-
-  ylim <- gwas_data %>%
-    filter(p == min(p)) %>%
-    mutate(ylim = abs(floor(log10(p))) + 2) %>%
-    pull(ylim)
-
-  sig <- 5e-8
-  manhplot <- ggplot(gwas_data, aes(x = bp_cum, y = -log10(p),
-                                    color = as.factor(chr), size = -log10(p))) +
-    geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") +
-    geom_point(alpha = 0.75) +
-    scale_x_continuous(label = axis_set$chr, breaks = axis_set$center) +
-    scale_y_continuous(expand = c(0,0), limits = c(0, ylim)) +
-    scale_color_manual(values = rep(c("#276FBF", "#183059"), unique(length(axis_set$chr)))) +
-    scale_size_continuous(range = c(0.5,3)) +
-    labs(x = NULL,
-         #https://sites.google.com/view/stuck-in-the-shallow-end/home/generate-manhattan-plots-with-ggplot2-and-ggrastr
-         title = theTitle) +
-    ylab(expression(paste(-log[10],"(", italic(P), ")"))) +
-    theme_minimal() +
-    theme(
-      legend.position = "none",
-      panel.grid.major.x = element_blank(),
-      panel.grid.minor.x = element_blank(),
-      axis.text.x = element_text(angle = 60, size = 8, vjust = 0.5)
-    )
-  manhplot
 }
 
 panel_plots_panelby_loader<- function(loader = "metabolomics"){

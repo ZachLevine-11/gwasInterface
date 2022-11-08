@@ -1,7 +1,6 @@
 
 export(browserManager)
 export(run_shiny)
-import(McMasterPandemic)
 import(ggplot2)
 import(shiny)
 importFrom(anytime,anytime)

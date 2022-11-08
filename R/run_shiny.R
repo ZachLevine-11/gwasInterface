@@ -15,12 +15,107 @@ browserManager <- function(openinBrowser){
   }
 }
 
-parameter.files <- c("CI_base.csv","CI_updApr1.csv","ICU1.csv", "ICU_diffs.csv", "PHAC.csv")
-default.parameter.file <- "ICU1.csv"
-default.start.date <- "2020-01-01"
-default.dropstates <- c("t","S","E","I","X")
-timeunitParams <- c("sigma", "gamma_a", "gamma_m", "gamma_s", "gamma_p", "rho")
-beta0 <- 1
+loaders <- c("Serum Metabolomics",
+             "Gut Microbiome",
+             "Iglu CGM",
+             "Liver Ultrasound",
+             "ABI",
+             "Sleep",
+             "Hormonal Status",
+             "DEXA")
+
+get_basepath <- function(loader, use_clumped){
+
+  if (loader == "Serum Metabolomics"){
+    if (use_clumped == "Yes"){
+      basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/metab/gwas_results_clumped"
+    }
+    else{
+      basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/metab/gwas_results_metab"
+    }
+  }
+  else if (loader == "Gut Microbiome"){
+    if (use_clumped == "Yes"){
+      basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/microbiome/gwas_results_clumped"
+    }
+    else{
+      basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/microbiome/gwas_results_mb"
+    }
+  }
+  else{
+    if (use_clumped== "Yes"){
+      basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_clumped"
+    }
+    else{
+      basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results"
+    }
+  }
+  basepath
+}
+
+get_available_gwases <- function(loader, use_clumped){
+  basepath <- get_basepath(loader, use_clumped)
+  thefiles<- list.files(basepath)
+  thefiles <- thefiles[thefiles != "batch0.log"]
+  thefiles
+}
+
+##from https://danielroelfs.com/blog/how-i-create-manhattan-plots-using-ggplot/
+ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot"){
+  print(head(gwas_data))
+  data_cum <- gwas_data %>%
+    group_by(chr) %>%
+    summarise(max_bp = max(bp)) %>%
+    mutate(bp_add = lag(cumsum(as.numeric(max_bp)), default = 0)) %>%
+    select(chr, bp_add)
+
+  gwas_data <- gwas_data %>%
+    inner_join(data_cum, by = "chr") %>%
+    mutate(bp_cum = bp + bp_add)
+  axis_set <- gwas_data %>%
+    group_by(chr) %>%
+    summarize(center = mean(bp_cum))
+
+  ylim <- gwas_data %>%
+    filter(p == min(p)) %>%
+    mutate(ylim = abs(floor(log10(p))) + 2) %>%
+    pull(ylim)
+
+  sig <- 5e-8
+  manhplot <- ggplot(gwas_data, aes(x = bp_cum, y = -log10(p),
+                                    color = as.factor(chr), size = -log10(p))) +
+    geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") +
+    geom_point(alpha = 0.75) +
+    scale_x_continuous(label = axis_set$chr, breaks = axis_set$center) +
+    scale_y_continuous(expand = c(0,0), limits = c(0, ylim)) +
+    scale_color_manual(values = rep(c("#276FBF", "#183059"), unique(length(axis_set$chr)))) +
+    scale_size_continuous(range = c(0.5,3)) +
+    labs(x = NULL,
+         #https://sites.google.com/view/stuck-in-the-shallow-end/home/generate-manhattan-plots-with-ggplot2-and-ggrastr
+         title = theTitle) +
+    ylab(expression(paste(-log[10],"(", italic(P), ")"))) +
+    theme_minimal() +
+    theme(
+      legend.position = "none",
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      axis.text.x = element_text(angle = 60, size = 8, vjust = 0.5)
+    )
+  manhplot
+}
+
+
+read_clumped <- function(fname){
+  read_in <- do.call(rbind, lapply(strsplit(readLines(fname), "\\s+|\\t+|\\s+\\t+|\\t+\\s+"), function(x){as.data.frame(t(x))}))
+  read_in <- read_in[, 1:6]
+  colnames(read_in) <- read_in[1,]
+  read_in <- read_in[-1,] ##Drop the column names as the first entry
+  read_in$CHR <- as.numeric(read_in$CHR)
+  read_in$"F" <- as.numeric(read_in$"F")
+  read_in$BP <- as.numeric(read_in$BP)
+  read_in$P <- as.numeric(read_in$P)
+  read_in
+}
 
 ##' Run the McMasterPandemic Shiny
 ##'
@@ -32,9 +127,6 @@ beta0 <- 1
 ##' @return NULL
 ##' @export
 run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
-  ## The ui (user interface) is what the user is shown when running
-  ## the shiny.  The ui also gathers input that is the passed to the
-  ## server (e.g., filling in boxes or sliders).
   ui <- fluidPage(theme = shinythemes::shinytheme("flatly"),
                   ##Set the title panel to be Heritage Maroon.
                   h1(id = "heading", "Eran Segal 10K Project Interactive GWAS Results Interface"),
@@ -46,40 +138,38 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                                   .tabbable > .nav > li > a[data-value='summarystatspanel'] {color: black}
                                   .tabbable > .nav > li > a[data-value='gencorr'] {color: black}
                                   ")),
-                  ##Bold the explanation title for the error entry tab
-                  tags$style(HTML("#explanationTitle {font-weight: bold;}")),
-                  ##Set the colour of the sidebar panel to be Heritage Gold.30a5bf
-                  tags$head(tags$style(HTML('#sidebar {background-color: #30a5bf;}'))),
-                  ##Bold the checkbutton panel title.
-                  tags$style(HTML("#checkButtonTitle {font-weight: bold;}")),
-                  ##Bold the summary table title.
-                  tags$style(HTML("#summaryTitle {font-weight: bold;}")),
-                  ##Set the background colour to be a lighter and faded Heritage Grey (original one is too dark).
                   shinyWidgets::setBackgroundColor(color = "#e6ebed"),
                   sidebarLayout(
                     sidebarPanel(id = "sidebar", width = 4,
-                                 fluidRow(
-                                   textOutput("checkButtonTitle"),
-                                   uiOutput("plotTogglePanel")
-                                 ),
-                                 fluidRow(
-                                   dateInput(inputId = "sd",
-                                             label = "Start Date",
-                                             value = default.start.date,
-                                             min = "2020-01-01",
-                                             max = "2030-11-31"),
-                                   uiOutput("endDate")),
-                                 fluidRow(
-                                   column(4,
-                                          textOutput("summaryTitle"),
-                                          tableOutput("summary")
-                                   )
-                                 ),
+                                 selectInput("do_clumped",
+                                             label = "Use clumped results for LD",
+                                             choices = c("Yes", "No")),
                                  ## Only show the selector to input parameters if that's selected.
-                                 uiOutput("maintabPanel"),
-                                 ##Colour the checkboxes to match the curves in the plot.
-                                 ##Use the below object to call the HTML tags within the server function.
-                                 htmlOutput("colourManager")),
+                                   tabsetPanel(
+                                     id = "tabs",
+                                     selected = "summarystatspanel",
+                                     tabPanel(
+                                       title = "Download ldscore report",
+                                       value = "gencorr",
+                                       selectInput("domain1",
+                                                   label = "Phenotype 1 domain:",
+                                                   choices = loaders),
+                                       uiOutput("pheno1"),
+                                       selectInput("domain2",
+                                                   label = "Phenotype 2 domain:",
+                                                   choices = loaders),
+                                       uiOutput("pheno2"),
+                                       uiOutput("ldDownload")
+                                     ),
+                                     tabPanel(
+                                       title = "Download GWAS Summary Statistics",
+                                       value = "summarystatspanel",
+                                       selectInput("domain",
+                                                   label = "Data domain:",
+                                                   choices = loaders),
+                                       uiOutput("pheno"),
+                                       uiOutput("gwasDownload")
+                                       ))),
                     mainPanel(
                       fluidRow(
                         uiOutput("plotColumn"),
@@ -91,44 +181,34 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
 
   #Everything else.
   server <- function(input, output, session){
-    ## non-standard eval; circumvent 'no visible binding' check
-    x <- Date <- Symbol <- Relative_value <- Rt <- NULL
+    output$plot <- renderPlot({
+      qqman::manhattan(read_clumped(paste0(get_basepath(input$domain, input$do_clumped), "/", input$pheno)))
+      })
     output$plotColumn <- renderUI({
-      plot(cars$speed, cars$dist)
+      plotOutput({"plot"})
     })
-    ##Render the tab panel server-side to force tab changes the way we'd like, and give us the load-edit functionality we're after.
-    output$maintabPanel <- renderUI({
-      tabsetPanel(
-        id = "tabs",
-        selected = "gencorr",
-        tabPanel(
-          title = "Download Ldscore report",
-          value = "gencorr",
-          selectInput("domain1",
-                      label = "Phenotype 1 domain:",
-                      choices = parameter.files, selected = default.parameter.file),
-          selectInput("pheno1",
-                      label = "Phenotype 1",
-                      choices = parameter.files, selected = default.parameter.file),
-          selectInput("domain2",
-                      label = "Phenotype 2 domain:",
-                      choices = parameter.files, selected = default.parameter.file),
-          selectInput("pheno2",
-                      label = "Phenotype 2",
-                      choices = parameter.files, selected = default.parameter.file)
-          ),
-        tabPanel(
-          title = "Download GWAS Summary Statistics",
-          value = "summarystatspanel",
-          selectInput("domain",
-                      label = "Data domain:",
-                      choices = parameter.files, selected = default.parameter.file),
-          selectInput("pheno",
-                      label = "Phenotype:",
-                      choices = parameter.files, selected = default.parameter.file),
-          downloadButton("downloadData", "Download GWAS Summary Statistics", class = "dbutton"),
-        )
-      )})
+    output$pheno <- renderUI({
+      selectInput("pheno",
+                  label = "Phenotype:",
+                  choices = get_available_gwases(input$domain, input$do_clumped))
+    })
+    output$gwasDownload <- renderUI({
+      downloadButton("downloadData", "Download GWAS Summary Statistics", class = "dbutton")
+    })
+    output$pheno1 <- renderUI({
+      selectInput("pheno1",
+                  label = "Phenotype:",
+                  choices = get_available_gwases(input$domain1, input$do_clumped))
+    })
+    output$pheno2 <- renderUI({
+      selectInput("pheno2",
+                  label = "Phenotype:",
+                  choices = get_available_gwases(input$domain2, input$do_clumped))
+    })
+    output$ldDownload <- renderUI({
+      downloadButton("downloadData", "Download ldscore report", class = "dbutton")
+    })
+
 
     ##Handle downloads for the sample template csv file.
     ##The file is an empty version of ICU1.csv so it scales as more parameters are added.
