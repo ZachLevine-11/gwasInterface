@@ -12,15 +12,9 @@ if(any(grepl(x = LD.files, pattern = ".*_snp_counter.*"))){
   if("nsnps.list.imputed" %in% ls()){
     snps.name.list <- snps.list.imputed.vector
     nsnps.list <- nsnps.list.imputed
-  }
-  if(is.null(names(nsnps.list))) names(nsnps.list) <- as.character(1:length(nsnps.list))
-} else{
-  error.message <- "It seems this directory does not contain all files needed for HDL. Please check your LD.path again. The current version of HDL only support pre-computed LD reference panels."
-  if(output.file != ""){
-    cat(error.message, file = output.file, append = T)
-  }
-  stop(error.message)
-}
+  }}
+
+
 gwas <- read.table("/net/mraid08/export/genie/LabData/Data/10K/genetics/PRSice/SummaryStatistics/Nealelab/v3/RawData/50_irnt.gwas.imputed_v3.both_sexes.tsv", head = TRUE)
 dictionary_file <- LD.files[grep(x = LD.files, pattern = "snp.dictionary.*")]
 load(file=paste(LD.path, dictionary_file, sep = "/"))
