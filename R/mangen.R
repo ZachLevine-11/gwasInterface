@@ -7,7 +7,7 @@ library(ggplotify)
 basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_clumped/"
 figpath_individual <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_figures/"
 figpath_panels <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_figures_panels/"
-all_gwases <- list.files(basepath)
+all_gwases <- c() #list.files(basepath)
 numGwases = length(all_gwases) ##correct for all the GWASES that we did, not just the ones from each loader.
 
 read_clumped <- function(fname){
@@ -37,7 +37,7 @@ make_all_gwas_plots_individual <- function(){
           dev.off()
 
     }
-  
+
       }
     }
   }
@@ -50,28 +50,28 @@ ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot"){
   gwas_data$bp <- gwas_data$POS
   library(ggplot2)
   library(dplyr)
-  data_cum <- gwas_data %>% 
-    group_by(chr) %>% 
-    summarise(max_bp = max(bp)) %>% 
-    mutate(bp_add = lag(cumsum(as.numeric(max_bp)), default = 0)) %>% 
+  data_cum <- gwas_data %>%
+    group_by(chr) %>%
+    summarise(max_bp = max(bp)) %>%
+    mutate(bp_add = lag(cumsum(as.numeric(max_bp)), default = 0)) %>%
     select(chr, bp_add)
-  
-  gwas_data <- gwas_data %>% 
-    inner_join(data_cum, by = "chr") %>% 
+
+  gwas_data <- gwas_data %>%
+    inner_join(data_cum, by = "chr") %>%
     mutate(bp_cum = bp + bp_add)
-  axis_set <- gwas_data %>% 
-    group_by(chr) %>% 
+  axis_set <- gwas_data %>%
+    group_by(chr) %>%
     summarize(center = mean(bp_cum))
-  
-  ylim <- gwas_data %>% 
-    filter(p == min(p)) %>% 
-    mutate(ylim = abs(floor(log10(p))) + 2) %>% 
+
+  ylim <- gwas_data %>%
+    filter(p == min(p)) %>%
+    mutate(ylim = abs(floor(log10(p))) + 2) %>%
     pull(ylim)
-  
+
   sig <- 5e-8
-  manhplot <- ggplot(gwas_data, aes(x = bp_cum, y = -log10(p), 
+  manhplot <- ggplot(gwas_data, aes(x = bp_cum, y = -log10(p),
                                     color = as.factor(chr), size = -log10(p))) +
-    geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") + 
+    geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") +
     geom_point(alpha = 0.75) +
     scale_x_continuous(label = axis_set$chr, breaks = axis_set$center) +
     scale_y_continuous(expand = c(0,0), limits = c(0, ylim)) +
@@ -79,10 +79,10 @@ ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot"){
     scale_size_continuous(range = c(0.5,3)) +
     labs(x = NULL,
          #https://sites.google.com/view/stuck-in-the-shallow-end/home/generate-manhattan-plots-with-ggplot2-and-ggrastr
-         title = theTitle) + 
+         title = theTitle) +
     ylab(expression(paste(-log[10],"(", italic(P), ")"))) +
     theme_minimal() +
-    theme( 
+    theme(
       legend.position = "none",
       panel.grid.major.x = element_blank(),
       panel.grid.minor.x = element_blank(),
@@ -129,7 +129,7 @@ panel_plots_panelby_loader<- function(loader = "metabolomics"){
       'batch0.q_box_median_mm_qbox_diameter.glm.linear',
       'batch0.q_box_mm_1_qbox_diameter.glm.linear',
       'batch0.q_box_mm_3_qbox_diameter.glm.linear')
-    
+
   }
   else if (loader  == "metabolomics"){
     operative_gwases <- c('batch0.Lipids_POS_951.7732_412.1897_348.8896',

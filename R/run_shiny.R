@@ -37,21 +37,19 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
   ## server (e.g., filling in boxes or sliders).
   ui <- fluidPage(theme = shinythemes::shinytheme("flatly"),
                   ##Set the title panel to be Heritage Maroon.
-                  h1(id = "heading", "Segal10KGwas"),
+                  h1(id = "heading", "Eran Segal 10K Project Interactive GWAS Results Interface"),
                   ##Colour the top and bottom of the page appropriately.
-                  tags$style(HTML("#heading {background-color: #7A003C; color: white !important;}")),
-                  tags$style(HTML("#sourcelink {background-color: #7A003C; color: white !important;}")),
+                  tags$style(HTML("#heading {background-color: #0078a4; color: white !important;}")),
+                  tags$style(HTML("#sourcelink {background-color: #0078a4; color: white !important;}")),
                   #Change the colours of text on the tab selectors to be blue.
                   tags$style(HTML("
-                                  .tabbable > .nav > li > a[data-value='plotaes'] {color: blue}
-                                  .tabbable > .nav > li > a[data-value='tcr'] {color: blue}
-                                  .tabbable > .nav > li > a[data-value='parametersPanel'] {color: blue}
-                                  .tabbable > .nav > li > a[data-value='procObsErr'] {color: blue}
+                                  .tabbable > .nav > li > a[data-value='summarystatspanel'] {color: black}
+                                  .tabbable > .nav > li > a[data-value='gencorr'] {color: black}
                                   ")),
-                  ##Bold the explanation title for the error entry tab.
+                  ##Bold the explanation title for the error entry tab
                   tags$style(HTML("#explanationTitle {font-weight: bold;}")),
-                  ##Set the colour of the sidebar panel to be Heritage Gold.
-                  tags$head(tags$style(HTML('#sidebar {background-color: #FDBF57;}'))),
+                  ##Set the colour of the sidebar panel to be Heritage Gold.30a5bf
+                  tags$head(tags$style(HTML('#sidebar {background-color: #30a5bf;}'))),
                   ##Bold the checkbutton panel title.
                   tags$style(HTML("#checkButtonTitle {font-weight: bold;}")),
                   ##Bold the summary table title.
@@ -60,11 +58,6 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                   shinyWidgets::setBackgroundColor(color = "#e6ebed"),
                   sidebarLayout(
                     sidebarPanel(id = "sidebar", width = 4,
-                                 fluidRow(
-                                   selectInput("fn",
-                                               label = "Sample parameter file:",
-                                               choices = parameter.files, selected = default.parameter.file),
-                                   downloadButton("downloadData", "Download sample parameter file", class = "dbutton"),                                 ),
                                  fluidRow(
                                    textOutput("checkButtonTitle"),
                                    uiOutput("plotTogglePanel")
@@ -101,80 +94,46 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     ## non-standard eval; circumvent 'no visible binding' check
     x <- Date <- Symbol <- Relative_value <- Rt <- NULL
     output$plotColumn <- renderUI({
-      library(cars)
       plot(cars$speed, cars$dist)
     })
     ##Render the tab panel server-side to force tab changes the way we'd like, and give us the load-edit functionality we're after.
     output$maintabPanel <- renderUI({
       tabsetPanel(
-        ##Use this to force the tab to change.
         id = "tabs",
-        ##The parameters panel needs to be the default selected panel. This is so it Shiny can render the panel first. The input slots aren't created until the panel is created.
-        ##So keep the default to be the parametersPanel to avoid ugly errors.
-        selected = "plotaes",
+        selected = "gencorr",
         tabPanel(
-          title = "Time-varying transmission rates",
-          value = "tcr",
-          textOutput("trmsg"),
-          checkboxInput("useVarying", label = "Simulate with time-varying transmission rates", value = FALSE),
-          conditionalPanel(condition = "input.useVarying",
-            br(),
-            br(),
-            ##Default time point is two months into the simulation.
-            textInput("timeParsDates", label = "Dates of changes, separated by commas", value = paste(lubridate::ymd(input$sd) + months(2), lubridate::ymd(input$sd) + months(4), lubridate::ymd(input$sd) + months(4), sep = ",")),
-            textInput("timeParsSymbols", label = "Parameter to change on each date", value = "beta0, beta0, alpha"),
-            textInput("timeParsRelativeValues", label = "Relative change on each date", value = "0.5, 0.75, 1.1"),
-          #  plotOutput("paramsPlot")
-          )
-        ),
+          title = "Download Ldscore report",
+          value = "gencorr",
+          selectInput("domain1",
+                      label = "Phenotype 1 domain:",
+                      choices = parameter.files, selected = default.parameter.file),
+          selectInput("pheno1",
+                      label = "Phenotype 1",
+                      choices = parameter.files, selected = default.parameter.file),
+          selectInput("domain2",
+                      label = "Phenotype 2 domain:",
+                      choices = parameter.files, selected = default.parameter.file),
+          selectInput("pheno2",
+                      label = "Phenotype 2",
+                      choices = parameter.files, selected = default.parameter.file)
+          ),
         tabPanel(
-          title = "Plot aesthetics",
-          value = "plotaes",
-          sliderInput("Globalsize", "Text size:",
-                      min = 5, max = 45,
-                      step = 0.25,
-                      value = 20),
-          sliderInput("lineThickness", "Line thickness:",
-                      min = 0, max = 10,
-                      step = 0.25,
-                      value = 3),
-          radioButtons(inputId = "scale",
-                       label = "Scaling options",
-                       choices = c("none",
-                                   "log y scale",
-                                   "sqrt y scale"),
-                       selected = "none"),
-          checkboxInput(inputId = "automaticSize",
-                        label = ("Show sliders for individual text element sizes"),
-                        value = 0),
-          conditionalPanel(condition = "input.automaticSize",
-                           sliderInput("titleSize", "Title size:",
-                                       min = 0, max = 25,
-                                       value = 20),
-                           sliderInput("XtextSize", "X axis title size:",
-                                       min = 0, max = 25,
-                                       value = 10),
-                           sliderInput("YtextSize", "Y axis title size:",
-                                       min = 0, max = 25,
-                                       value = 10)
-          )),
-        tabPanel(
-          title = "Simulation Parameters",
-          value = "parametersPanel",
-          checkboxInput(inputId = "showAll",
-                        label = ("Show parameter sliders"),
-                        value = FALSE),
-          conditionalPanel(condition = "input.showAll"
-                           ##Using names to avoid factors getting passed as inputs to textInput_param.
-                                ##Since we can set R0, we don't want to have the option to change beta0.
-                                )
+          title = "Download GWAS Summary Statistics",
+          value = "summarystatspanel",
+          selectInput("domain",
+                      label = "Data domain:",
+                      choices = parameter.files, selected = default.parameter.file),
+          selectInput("pheno",
+                      label = "Phenotype:",
+                      choices = parameter.files, selected = default.parameter.file),
+          downloadButton("downloadData", "Download GWAS Summary Statistics", class = "dbutton"),
         )
       )})
 
     ##Handle downloads for the sample template csv file.
     ##The file is an empty version of ICU1.csv so it scales as more parameters are added.
     output$downloadData <- downloadHandler(
-      filename = function(){return("sampleparams.csv")},
+      filename = function(){return("gwas_results")},
       content = function(file) {
         basicTemplate <- read_in_csv()
         ##Default the values column.
@@ -182,18 +141,10 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
         write.csv(basicTemplate, file, row.names = FALSE)
       }
     )
-
-    output$summaryTitle <- renderText({"Summary characteristics"})
-    output$explanationTitle <- renderText({"Explanation"})
-    output$errorExplanations <- renderText({"Use these options to simulate noise in the data. The observation error parameter is the dispersion parameter for a negative binomial distribution. A suitable value could be 200.
-      The process dispersion parameter adds gamma white noise to the event rates by pulling from a multinomial distribution. A reasonable value for process dispersion is 0.5"})
-    output$checkButtonTitle <- renderText({"Curves to display"})
-    ##EndDate is the name of the ui object, "ed" is the name of the input slot to store the end date in.
-    ##We make this reactive so we can use the input start date as the minimum value for the end date.
-    output$sourcelink <- renderUI({tagList(
-      "McMaster Pandemic source code available at ",
-      a("https://github.com/bbolker/McMasterPandemic", href = "https://github.com/bbolker/McMasterPandemic"),
-      "                                Shiny interface to McMaster Pandemic by Zachary Levine."
+      output$sourcelink <- renderUI({tagList(
+      "Source code available at ",
+      a("https://github.com/repo-link", href = "https://github.com/repo-link"),
+      "                                GWAS Repository"
     )})
   }
   if (usingOnline == FALSE){

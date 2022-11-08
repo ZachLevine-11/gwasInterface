@@ -9,6 +9,6 @@ Description: Shiny app for McMasterPandemic.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-Imports:
+Imports: shiny
 Remotes: 
 RoxygenNote: 7.1.2
