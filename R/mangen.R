@@ -7,7 +7,7 @@ library(ggplotify)
 basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_clumped/"
 figpath_individual <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_figures/"
 figpath_panels <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_figures_panels/"
-all_gwases <- c() #list.files(basepath)
+all_gwases <- c()
 numGwases = length(all_gwases) ##correct for all the GWASES that we did, not just the ones from each loader.
 
 read_clumped <- function(fname){
@@ -24,15 +24,19 @@ read_clumped <- function(fname){
 
 ##make all plots for traits with significant hits and put them in a directory
 make_all_gwas_plots_individual <- function(){
-    for (long_filename in all_gwases){
+    for (long_filename in list.files(basepath)){
     if (endsWith(long_filename, ".clumped")){
       gwas <- read_clumped(paste0(basepath, long_filename))
       if (length(gwas$P) != 0){
-        if (nrow(gwas[gwas$P < (5*10**(-8))/numGwases,]) != 0){
-          jpeg(stringr::str_replace_all(paste0(figpath_individual, long_filename, ".jpg"), "%", ""))
+        if (nrow(gwas[gwas$P < (5*10**(-8)),]) != 0){
+          jpeg(stringr::str_replace_all(paste0(figpath_individual, long_filename, ".jpg"), "%", ","), width =1080, height =1080, quality = 95)
           manhattan(gwas, chr = "CHR",
                     bp = "BP",
-                    snp = "SNP",)
+                    snp = "SNP",
+                    yaxs = "i",
+                    annotatePval = 5*10**(-8),
+                    main = paste0("Manhattan Plot of ", stringr::str_replace_all(stringr::str_replace_all(long_filename, ".clumped", ""), "batch0.", "")),
+                    col = c("navy", "steelblue"))
           dev.off()
 
     }

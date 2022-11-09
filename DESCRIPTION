@@ -12,6 +12,7 @@ LazyData: true
 Imports:
   shiny,
   qqman,
+  stringr,
   dplyr,
   ggplot2
 Remotes: 
