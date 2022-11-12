@@ -56,7 +56,13 @@ get_basepath <- function(loader, use_clumped){
 get_available_gwases <- function(loader, use_clumped){
   basepath <- get_basepath(loader, use_clumped)
   thefiles<- list.files(basepath)
-  thefiles <- thefiles[thefiles != "batch0.log"]
+  if (use_clumped == "Yes"){
+    thefilter <- endsWith(thefiles, ".clumped") & !startsWith(thefiles, "clumpeheader")
+  }
+  else{
+  thefilter <- endsWith(thefiles,".glm.linear")
+  }
+  thefiles <- thefiles[thefilter]
   thefiles
 }
 
