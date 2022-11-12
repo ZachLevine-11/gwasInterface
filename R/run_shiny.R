@@ -61,34 +61,33 @@ get_available_gwases <- function(loader, use_clumped){
 }
 
 ##from https://danielroelfs.com/blog/how-i-create-manhattan-plots-using-ggplot/
-ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot"){
-  print(head(gwas_data))
+ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot", ymin = 4){
+  gwas_data <- gwas_data[, colnames(gwas_data) %in% c("BP", "P", "CHR", "SNP")] ##fix empty column name errors
   data_cum <- gwas_data %>%
-    group_by(chr) %>%
-    summarise(max_bp = max(bp)) %>%
+    group_by(CHR) %>%
+    summarise(max_bp = max(BP)) %>%
     mutate(bp_add = lag(cumsum(as.numeric(max_bp)), default = 0)) %>%
-    select(chr, bp_add)
-
+    select(CHR, bp_add)
   gwas_data <- gwas_data %>%
-    inner_join(data_cum, by = "chr") %>%
-    mutate(bp_cum = bp + bp_add)
+    inner_join(data_cum, by = "CHR") %>%
+    mutate(bp_cum = BP + bp_add)
   axis_set <- gwas_data %>%
-    group_by(chr) %>%
+    group_by(CHR) %>%
     summarize(center = mean(bp_cum))
 
   ylim <- gwas_data %>%
-    filter(p == min(p)) %>%
-    mutate(ylim = abs(floor(log10(p))) + 2) %>%
+    filter(P == min(P)) %>%
+    mutate(ylim = abs(floor(log10(P))) + 2) %>%
     pull(ylim)
 
   sig <- 5e-8
-  manhplot <- ggplot(gwas_data, aes(x = bp_cum, y = -log10(p),
-                                    color = as.factor(chr), size = -log10(p))) +
+  manhplot <- ggplot(gwas_data, aes(x = bp_cum, y = -log10(P),
+                                    color = as.factor(CHR), size = -log10(P))) +
     geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") +
     geom_point(alpha = 0.75) +
-    scale_x_continuous(label = axis_set$chr, breaks = axis_set$center) +
-    scale_y_continuous(expand = c(0,0), limits = c(0, ylim)) +
-    scale_color_manual(values = rep(c("#276FBF", "#183059"), unique(length(axis_set$chr)))) +
+    scale_x_continuous(label = axis_set$CHR, breaks = axis_set$center) +
+    scale_y_continuous(expand = c(0,0), limits = c(ymin, ylim)) +
+    scale_color_manual(values = rep(c("#276FBF", "#183059"), unique(length(axis_set$CHR)))) +
     scale_size_continuous(range = c(0.5,3)) +
     labs(x = NULL,
          #https://sites.google.com/view/stuck-in-the-shallow-end/home/generate-manhattan-plots-with-ggplot2-and-ggrastr
@@ -103,7 +102,6 @@ ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot"){
     )
   manhplot
 }
-
 
 read_clumped <- function(fname){
   read_in <- do.call(rbind, lapply(strsplit(readLines(fname), "\\s+|\\t+|\\s+\\t+|\\t+\\s+"), function(x){as.data.frame(t(x))}))

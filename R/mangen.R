@@ -4,39 +4,50 @@ library(genio)
 library(patchwork)
 library(ggplotify)
 
-basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_clumped/"
 figpath_individual <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_figures/"
 figpath_panels <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_figures_panels/"
 all_gwases <- c()
 numGwases = length(all_gwases) ##correct for all the GWASES that we did, not just the ones from each loader.
 
-read_clumped <- function(fname){
-  read_in <- do.call(rbind, lapply(strsplit(readLines(fname), "\\s+|\\t+|\\s+\\t+|\\t+\\s+"), function(x){as.data.frame(t(x))}))
-  read_in <- read_in[, 1:6]
-  colnames(read_in) <- read_in[1,]
-  read_in <- read_in[-1,] ##Drop the column names as the first entry
-  read_in$CHR <- as.numeric(read_in$CHR)
-  read_in$"F" <- as.numeric(read_in$"F")
-  read_in$BP <- as.numeric(read_in$BP)
-  read_in$P <- as.numeric(read_in$P)
-  read_in
-}
 
 ##make all plots for traits with significant hits and put them in a directory
-make_all_gwas_plots_individual <- function(){
+make_all_gwas_plots_individual <- function(clumped = TRUE){
+  if (clumped){basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_clumped/"
+  }
+  else{
+    basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results/"
+
+  }
     for (long_filename in list.files(basepath)){
-    if (endsWith(long_filename, ".clumped")){
-      gwas <- read_clumped(paste0(basepath, long_filename))
+    if (endsWith(long_filename, ".clumped"    )){
+
+      if (clumped){gwas <- read_clumped(paste0(basepath, long_filename))}
+      else{
+        gwas <- read.csv(paste0(basepath, long_filename, sep = "\t"))
+      }
+
       if (length(gwas$P) != 0){
         if (nrow(gwas[gwas$P < (5*10**(-8)),]) != 0){
-          jpeg(stringr::str_replace_all(paste0(figpath_individual, long_filename, ".jpg"), "%", ","), width =1080, height =1080, quality = 95)
-          manhattan(gwas, chr = "CHR",
-                    bp = "BP",
-                    snp = "SNP",
-                    yaxs = "i",
-                    annotatePval = 5*10**(-8),
-                    main = paste0("Manhattan Plot of ", stringr::str_replace_all(stringr::str_replace_all(long_filename, ".clumped", ""), "batch0.", "")),
-                    col = c("navy", "steelblue"))
+          jpeg(stringr::str_replace_all(paste0(figpath_individual, long_filename, ".jpg"), "%", ","), width =1080, height =1080, quality =100)
+          if (clumped){
+            manhattan(gwas, chr = "CHR",
+                      bp = "BP",
+                      snp = "SNP",
+                      yaxs = "i",
+                      annotatePval = 5*10**(-8),
+                      main = paste0("Manhattan Plot of ", stringr::str_replace_all(stringr::str_replace_all(long_filename, ".clumped", ""), "batch0.", "")),
+                      col = c("navy", "steelblue"), ylim = c(4, max(-log10(gwas$P)))) ##the significance threshol dfor clumping is 0.0001, so we won't have any SNPS below this
+          }
+          else{
+            manhattan(gwas, chr = "CHR",
+                      bp = "BP",
+                      snp = "SNP",
+                      yaxs = "i",
+                      annotatePval = 5*10**(-8),
+                      main = paste0("Manhattan Plot of ", stringr::str_replace_all(stringr::str_replace_all(long_filename, ".clumped", ""), "batch0.", "")),
+                      col = c("navy", "steelblue"))
+
+          }
           dev.off()
 
     }
@@ -46,9 +57,29 @@ make_all_gwas_plots_individual <- function(){
   }
 }
 
-panel_plots_panelby_loader<- function(loader = "metabolomics"){
+##only for clumped traits now
+panel_plots_panelby_loader<- function(loader = "percentile"){
+  basepath <- "/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results_clumped/"
   library("patchwork")
-  if (loader == "bloodtests"){
+  if (loader == "percentile"){
+    operative_gwases <- c('batch0.in_range_70_180.clumped',
+                         'batch0.MAD.clumped',
+                         'batch0.iqr.clumped',
+                         'batch0.below_70.clumped',
+                         'batch0.sd.clumped',
+                         'batch0.body_arm_left_bmd.clumped',
+                         'batch0.grade_eugly.clumped',
+                         'batch0.above_140.clumped',
+                         'batch0.body_head_bmc.clumped',
+                         'batch0.spine_l1_average_width.clumped',
+                         'batch0.SdHHMM.clumped',
+                         'batch0.spine_l1_l2_average_width.clumped',
+                         'batch0.SdW.clumped',
+                         'batch0.body_arms_bmd.clumped',
+                         'batch0.body_arm_right_bmd.clumped',
+                         'batch0.below_54.clumped')
+  }
+  else if (loader == "bloodtests"){
     operative_gwases <- c('batch0.bt__protein_total.glm.linear',
       'batch0.bt__bilirubin_total.glm.linear',
       'batch0.bt__uric_acid.glm.linear',
@@ -117,7 +148,7 @@ panel_plots_panelby_loader<- function(loader = "metabolomics"){
       ##for these loaders, the name is complete as is is
       long_filename <- short_filename
     }
-      gwas <- read.csv(paste0(basepath, long_filename), sep="\t")
+      gwas <- read_clumped(paste0(basepath, long_filename))
       if (length(gwas$P) != 0){
           p <- ggplot_manhattan(gwas, theTitle = stringr::str_replace(short_filename, pattern = "batch.0", replacement = ""))
           ps[[i]] <- p
@@ -127,7 +158,6 @@ panel_plots_panelby_loader<- function(loader = "metabolomics"){
   ##do this here
   jpeg(stringr::str_replace_all(paste0(figpath_panels, loader, ".jpg"), "%", ""), width = 1920, height = 3000)
   cowplot::plot_grid(plotlist = ps)
-  dev.off()
 }
 
 
