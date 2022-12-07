@@ -91,7 +91,7 @@ ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot", ymin = 4){
                                     color = as.factor(CHR), size = -log10(P))) +
     geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") +
     geom_point(alpha = 0.75) +
-    scale_x_continuous(label = axis_set$CHR, breaks = axis_set$center) +
+    scale_x_continuous(label = axis_set$CHR, breaks = axis_set$center, guide = guide_axis(n.dodge = 2)) +
     scale_y_continuous(expand = c(0,0), limits = c(ymin, ylim)) +
     scale_color_manual(values = rep(c("#276FBF", "#183059"), unique(length(axis_set$CHR)))) +
     scale_size_continuous(range = c(0.5,3)) +
@@ -106,6 +106,7 @@ ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot", ymin = 4){
       panel.grid.minor.x = element_blank(),
       axis.text.x = element_text(angle = 60, size = 8, vjust = 0.5)
     )
+  manhplot <- manhplot  + theme(title = element_text(size = 0), axis.text.y = element_text(size = 15), axis.title.y = element_text(size = 17), axis.title.x = element_text(size = 15), axis.text.x = element_text(size = 15)) + labs(x = "CHR")
   manhplot
 }
 
@@ -146,6 +147,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                   sidebarLayout(
                     sidebarPanel(id = "sidebar", width = 4,
                                  selectInput("do_clumped",
+                                             selected = "Yes",
                                              label = "Use clumped results for LD",
                                              choices = c("Yes", "No")),
                                  ## Only show the selector to input parameters if that's selected.
@@ -186,12 +188,18 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
   #Everything else.
   server <- function(input, output, session){
     output$plot <- renderPlot({
+      ##Force reactive loading based on these values
+      input$input$domain
+      input$do_clumped
+      input$pheno
       qqman::manhattan(read_clumped(paste0(get_basepath(input$domain, input$do_clumped), "/", input$pheno)))
       })
     output$plotColumn <- renderUI({
       plotOutput({"plot"})
     })
     output$pheno <- renderUI({
+      input$domain
+      input$do_clumped
       selectInput("pheno",
                   label = "Phenotype:",
                   choices = get_available_gwases(input$domain, input$do_clumped))
@@ -200,11 +208,15 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
       downloadButton("downloadData", "Download GWAS Summary Statistics", class = "dbutton")
     })
     output$pheno1 <- renderUI({
+      input$domain1
+      input$do_clumped
       selectInput("pheno1",
                   label = "Phenotype:",
                   choices = get_available_gwases(input$domain1, input$do_clumped))
     })
     output$pheno2 <- renderUI({
+      input$domain2
+      input$do_clumped
       selectInput("pheno2",
                   label = "Phenotype:",
                   choices = get_available_gwases(input$domain2, input$do_clumped))
