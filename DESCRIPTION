@@ -1,4 +1,4 @@
-Package: SegalGwas
+Package: gwasInterface
 Type: Package
 Title: Shiny App for Segal Gwas
 Version: 0.1.0
