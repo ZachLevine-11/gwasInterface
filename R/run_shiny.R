@@ -1,18 +1,3 @@
-
-
-get_available_gwases <- function(loader){
-  basepath <- get_basepath(loader)
-  thefiles<- list.files(basepath)
-  if (use_clumped == "Yes"){
-    thefilter <- endsWith(thefiles, ".clumped") & !startsWith(thefiles, "clumpeheader")
-  }
-  else{
-  thefilter <- endsWith(thefiles,".glm.linear")
-  }
-  thefiles <- thefiles[thefilter]
-  thefiles
-}
-
 ##Supports stand alone calling in package
 list_full_gwas_results <- function(){
    read.csv(system.file("lists",
@@ -85,8 +70,6 @@ read_clumped <- function(fname){
   read_in
 }
 
-loaders <- c("CGMLoader")
-
 ##' Run the McMasterPandemic Shiny
 ##'
 ##' run_shiny() is an example of a single-file Shiny app in that it defines a UI object and a server method to handle that object. A benefit is that Roxygen import tags only need to be called once to become available to the entire shiny, and it's easy to run the shiny as well. After both the ui object and server function are defined, browserManager is called, which sets the viewing environment that the Shiny runs in. Anywhere with a tag$html call is either a CSS or HTML tag to change certain visual aspects of the shiny.  In addition, many ui elements are rendered in the server function and passed to ui with renderUI. RenderHTML is another wrapper for this as well. This lets us make UI elements which depend on input from the UI itself.
@@ -147,7 +130,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     output$plot <- renderPlot({
       ##Force reactive loading based on these values
       input$pheno
-      ggplot_manhattan(read.csv(paste0("~/gwasInterface/inst/gwasresults/" , input$pheno)))
+      qqplot_manhattan(readRDS(system.file(paste0("full_results_rds/", input$pheno, ".Rds"),
+                               package = "gwasInterface")))
       })
     output$plotColumn <- renderUI({
       plotOutput({"plot"})
@@ -156,7 +140,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
       input$domain
       selectInput("pheno",
                   label = "Phenotype:",
-                  choices = list.files("~/gwasInterface/inst/gwasresults/"))
+                  choices = list_full_gwas_results())
     })
     output$gwasDownload <- renderUI({
       downloadButton("downloadData", "Download GWAS Summary Statistics", class = "dbutton")

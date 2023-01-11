@@ -4,4 +4,4 @@
 
 pkgload::load_all(export_all = FALSE,helpers = FALSE,attach_testthat = FALSE)
 options("golem.app.prod" = TRUE)
-gwasInterface::run_shiny(TRUE, TRUE) # add parameters here (if any)
+gwasInterface::run_shiny()
