@@ -2,6 +2,7 @@
 
 export(qqman_manhattan)
 export(run_shiny)
+import(data.table)
 import(dplyr)
 import(ggplot2)
 import(shiny)

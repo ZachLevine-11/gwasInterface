@@ -9,14 +9,15 @@ list_full_gwas_results <- function(){
 ##' @export
 qqman_manhattan <- function(x){
   library(qqman)
-  manhattan(x, chr = "X.CHROM", bp = "POS", snp = "ID", suggestiveline = -log10(5*10**(-8)), genomewideline = -log10((5*10**(-8))/727), annotatePval = -log10(5*10**(-8)))
+  manhattan(x, chr = "X.CHROM", bp = "POS", snp = "ID",
+            ylim = c(4, 8), ##-log10(5*10**-5) ~ 4.3
+            suggestiveline = -log10(5*10**(-8)), genomewideline = -log10((5*10**(-8))/727), annotatePval = -log10((5*10**(-8)))/727)
 
 }
 
 ##from https://danielroelfs.com/blog/how-i-create-manhattan-plots-using-ggplot/
 ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot", ymin = 4){
-  gwas_data <- gwas_data[, colnames(gwas_data) %in% c("BP", "P", "CHROM", "SNP")] ##fix empty column name errors
-  gwas_data$CHR <- gwas_data$CHROM
+  colnames(gwas_data) <- c("CHR", "BP", "SNP", "REF", "ALT", "A1", "AX", "TEST", "N", "BETA", "SE", "T_STAT", "P")
   data_cum <- gwas_data %>%
     group_by(CHR) %>%
     summarise(max_bp = max(BP)) %>%
@@ -34,10 +35,8 @@ ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot", ymin = 4){
     mutate(ylim = abs(floor(log10(P))) + 2) %>%
     pull(ylim)
 
-  sig <- 5e-8
   manhplot <- ggplot(gwas_data, aes(x = bp_cum, y = -log10(P),
                                     color = as.factor(CHR), size = -log10(P))) +
-    geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") +
     geom_point(alpha = 0.75) +
     scale_x_continuous(label = axis_set$CHR, breaks = axis_set$center, guide = guide_axis(n.dodge = 2)) +
     scale_y_continuous(expand = c(0,0), limits = c(ymin, ylim)) +
@@ -70,6 +69,7 @@ read_clumped <- function(fname){
   read_in
 }
 
+
 ##' Run the McMasterPandemic Shiny
 ##'
 ##' run_shiny() is an example of a single-file Shiny app in that it defines a UI object and a server method to handle that object. A benefit is that Roxygen import tags only need to be called once to become available to the entire shiny, and it's easy to run the shiny as well. After both the ui object and server function are defined, browserManager is called, which sets the viewing environment that the Shiny runs in. Anywhere with a tag$html call is either a CSS or HTML tag to change certain visual aspects of the shiny.  In addition, many ui elements are rendered in the server function and passed to ui with renderUI. RenderHTML is another wrapper for this as well. This lets us make UI elements which depend on input from the UI itself.
@@ -80,11 +80,11 @@ read_clumped <- function(fname){
 ##' @import ggplot2
 ##' @import shinythemes
 ##' @import dplyr
+##' @import data.table
 ##' @return NULL
 ##' @export
 run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
   ui <- fluidPage(theme = shinythemes::shinytheme("flatly"),
-                  ##Set the title panel to be Heritage Maroon.
                   h1(id = "heading", "Eran Segal 10K Project Interactive GWAS Results Interface"),
                   ##Colour the top and bottom of the page appropriately.
                   tags$style(HTML("#heading {background-color: #0078a4; color: white !important;}")),
@@ -94,7 +94,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                                   .tabbable > .nav > li > a[data-value='summarystatspanel'] {color: black}
                                   .tabbable > .nav > li > a[data-value='gencorr'] {color: black}
                                   ")),
-                  shinyWidgets::setBackgroundColor(color = "#e6ebed"),
+#                  shinyWidgets::setBackgroundColor(color = "#e6ebed"),
                   sidebarLayout(
                     sidebarPanel(id = "sidebar", width = 4,
                                  ## Only show the selector to input parameters if that's selected.
@@ -103,23 +103,18 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                                      selected = "summarystatspanel",
                                      tabPanel(
                                        uiOutput("pheno1"),
-                                       selectInput("domain2",
-                                                   label = "Phenotype 2 domain:",
-                                                   choices = loaders),
                                      ),
                                      tabPanel(
                                        title = "Visualize GWAS Summary Statistics",
                                        value = "summarystatspanel",
-                                       selectInput("domain",
-                                                   label = "Data domain:",
-                                                   choices = loaders),
-                                       uiOutput("pheno"),
+                                       selectInput("pheno",
+                                                   label = "Phenotype:",
+                                                   choices = list_full_gwas_results()),
                                        uiOutput("gwasDownload")
                                        ))),
                     mainPanel(
-                      fluidRow(
-                        uiOutput("plotColumn"),
-                        br())
+                        plotOutput("plot", width  = "100%"),
+                        dataTableOutput("table"),
                     )
                   ),
                   uiOutput("sourcelink")
@@ -130,17 +125,14 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     output$plot <- renderPlot({
       ##Force reactive loading based on these values
       input$pheno
-      qqplot_manhattan(readRDS(system.file(paste0("full_results_rds/", input$pheno, ".Rds"),
+      qqman_manhattan(readRDS(system.file(paste0("full_results_rds/", input$pheno, ".Rds"),
                                package = "gwasInterface")))
       })
-    output$plotColumn <- renderUI({
-      plotOutput({"plot"})
-    })
-    output$pheno <- renderUI({
-      input$domain
-      selectInput("pheno",
-                  label = "Phenotype:",
-                  choices = list_full_gwas_results())
+    output$table <- renderDataTable({
+      ##Force reactive loading based on these values
+      input$pheno
+      data.table(readRDS(system.file(paste0("full_results_rds/", input$pheno, ".Rds"),
+                                          package = "gwasInterface")))
     })
     output$gwasDownload <- renderUI({
       downloadButton("downloadData", "Download GWAS Summary Statistics", class = "dbutton")

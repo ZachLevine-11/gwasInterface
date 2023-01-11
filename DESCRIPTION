@@ -14,6 +14,7 @@ Imports:
   qqman,
   stringr,
   dplyr,
+  data.table,
   ggplot2
 Remotes: 
 RoxygenNote: 7.1.2
