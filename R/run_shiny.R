@@ -10,7 +10,7 @@ list_full_gwas_results <- function(){
 qqman_manhattan <- function(x){
   library(qqman)
   manhattan(x, chr = "X.CHROM", bp = "POS", snp = "ID",
-            ylim = c(4, 8), ##-log10(5*10**-5) ~ 4.3
+            ylim = c(3, 8), ##-log10(5*10**-n) ~ n-1, i.e for 4 put 3
             suggestiveline = -log10(5*10**(-8)), genomewideline = -log10((5*10**(-8))/727), annotatePval = -log10((5*10**(-8)))/727)
 
 }
