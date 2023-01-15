@@ -69,6 +69,13 @@ read_clumped <- function(fname){
   read_in
 }
 
+format_gwas <- function(thephenoname){
+  thegwas <- readRDS(system.file(paste0("full_results_rds/", thephenoname, ".Rds"),
+                                 package = "gwasInterface"))
+  colnames(thegwas) <- c("CHR", "BP", "SNP", "REF", "ALT", "A1", "AX", "TEST", "N", "BETA", "SE", "T_STAT", "P")
+  thegwas <- thegwas[order(thegwas$P),]
+  data.table(thegwas)
+}
 
 ##' Run the McMasterPandemic Shiny
 ##'
@@ -131,23 +138,18 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     output$table <- renderDataTable({
       ##Force reactive loading based on these values
       input$pheno
-      data.table(readRDS(system.file(paste0("full_results_rds/", input$pheno, ".Rds"),
-                                          package = "gwasInterface")))
+      thegwas <- format_gwas(input$pheno)
     })
     output$gwasDownload <- renderUI({
       downloadButton("downloadData", "Download GWAS Summary Statistics", class = "dbutton")
     })
 
-
     ##Handle downloads for the sample template csv file.
     ##The file is an empty version of ICU1.csv so it scales as more parameters are added.
     output$downloadData <- downloadHandler(
-      filename = function(){return("gwas_results")},
+      filename = function(){return(paste0(input$pheno, ".csv"))},
       content = function(file) {
-        basicTemplate <- read_in_csv()
-        ##Default the values column.
-        basicTemplate$Value <- read_params("PHAC.csv")
-        write.csv(basicTemplate, file, row.names = FALSE)
+        write.csv(format_gwas(input$pheno), file, row.names = FALSE)
       }
     )
       output$sourcelink <- renderUI({tagList(
