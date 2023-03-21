@@ -7,11 +7,10 @@ list_full_gwas_results <- function(){
 
 
 ##' @export
-qqman_manhattan <- function(x){
-  library(qqman)
-  manhattan(x, chr = "X.CHROM", bp = "POS", snp = "ID",
-            ylim = c(2.5, 8), ##-log10(5*10**-n) ~ n-1, i.e for 4 put 3
-            suggestiveline = -log10(5*10**(-8)), genomewideline = -log10((5*10**(-8))/727), annotatePval = 5*10**(-8)/727)
+##' @import fastman
+shiny_manhattan <- function(x){
+  ##ylims: -log10(5*10**-n) ~ n-1, i.e for 4 put 3
+  fastman::fastman(x, chr = "X.CHROM", bp ="POS", cex.axis = 1, annotatePval =  5*10**(-8)/727, snp = "ID", cex.text = 1.3, genomewideline = -log10(5*10**(-8)/727), suggestiveline = -log10(5e-8), ylim = c(2.5, max(-log10(x$P))))
 
 }
 
@@ -182,7 +181,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     output$plot <- renderPlot({
       ##Force reactive loading based on these values
       input$pheno
-      qqman_manhattan(readRDS(system.file(paste0("full_results_rds/", input$pheno, ".Rds"),
+      shiny_manhattan(readRDS(system.file(paste0("full_results_rds/", input$pheno, ".Rds"),
                                package = "gwasInterface")))
       })
     output$table <- renderDataTable({

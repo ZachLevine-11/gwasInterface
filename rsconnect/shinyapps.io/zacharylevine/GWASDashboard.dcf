@@ -1,0 +1,13 @@
+name: GWASDashboard
+title: GWASDashboard
+username:
+account: zacharylevine
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 8012892
+bundleId: 6736051
+url: https://zacharylevine.shinyapps.io/GWASDashboard/
+when: 1673799437.12098
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: ._.DS_Store
