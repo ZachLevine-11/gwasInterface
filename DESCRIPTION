@@ -10,7 +10,6 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Imports: shiny, stringr, dplyr, data.table, ggplot2
-Remotes:
 RoxygenNote: 7.1.2
 NeedsCompilation: no
 Packaged: 2023-01-15 16:08:18 UTC; zacharyl
