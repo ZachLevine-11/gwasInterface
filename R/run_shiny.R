@@ -10,10 +10,48 @@ list_full_gwas_results <- function(){
 qqman_manhattan <- function(x){
   library(qqman)
   manhattan(x, chr = "X.CHROM", bp = "POS", snp = "ID",
-            ylim = c(3, 8), ##-log10(5*10**-n) ~ n-1, i.e for 4 put 3
-            suggestiveline = -log10(5*10**(-8)), genomewideline = -log10((5*10**(-8))/727), annotatePval = -log10((5*10**(-8)))/727)
+            ylim = c(2.5, 8), ##-log10(5*10**-n) ~ n-1, i.e for 4 put 3
+            suggestiveline = -log10(5*10**(-8)), genomewideline = -log10((5*10**(-8))/727), annotatePval = 5*10**(-8)/727)
 
 }
+
+make_paper_figures <- function(){
+  qu <- read.csv("/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results/batch0.1st_Qu..glm.linear", sep = "\t")
+ # dx <- read.csv("/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results/batch0.body_head_bmd.glm.linear", sep = "\t")
+  #jpeg("~/Desktop/dx.jpeg", width = 960)
+  #fastman(dx, chr = "X.CHROM", bp ="POS", ylim = c(0, 11), cex.axis = 1, annotatePval =  5*10**(-8)/727, snp = "ID", cex = 1, genomewideline = -log10(5*10**(-8)/727), suggestiveline = -log10(5e-8))
+  #dev.off()
+  jpeg("~/Desktop/qu.jpeg", width = 960)
+  fastman(qu, chr = "X.CHROM", bp ="POS", cex.axis = 1, annotatePval =  5*10**(-8)/727, snp = "ID", cex.text = 1.3, genomewideline = -log10(5*10**(-8)/727), suggestiveline = -log10(5e-8))
+  dev.off()
+}
+
+make_cnv_manplot <- function(){
+  library(qqman)
+  res <- read.csv("/net/mraid08/export/jasmine/zach/cnv/ea1c_test_formatted.csv")
+  res_add_to_each_chr_start <- sapply(unique(res$CHR), function(chr){res[res$CHR == toString(as.numeric(chr) - 1), "END"][length(res[res$CHR == toString(as.numeric(chr) - 1),])]})
+  res_add_to_each_chr_start[is.na(res_add_to_each_chr_start)] <- 0
+  res_add_to_each_chr_start <- cumsum(res_add_to_each_chr_start)
+  for (chr in names(res_add_to_each_chr_start)){
+    res[res$CHR == toString(chr),"START"] <- res[res$CHR == toString(chr),"START"] + res_add_to_each_chr_start[chr]
+  }
+  res$BP <- (res$START + res$END)/2
+  res[res$CHR == "X", "CHR"] <- 23
+  res[res$CHR == "Y", "CHR"] <- 24
+  res[res$CHR == "MT", "CHR"] <- 25
+  res$CHR <- as.numeric(res$CHR)
+  jpeg("~/Desktop/ea1c_cnv.jpeg", width = 960)
+  manhattan(res[!is.na(res$P),])
+  dev.off()
+  }
+
+ea1c_plot <- function(){
+  library(fastman)
+  ea1c <- read.csv("/net/mraid08/export/jasmine/zach/height_gwas/all_gwas/gwas_results/batch0.ea1c.glm.linear", sep = "\t")
+  jpeg("~/Desktop/ea1c_snps.jpeg", width = 960)
+  fastman(ea1c, chr = "X.CHROM", bp ="POS", cex.axis = 1, annotatePval =  5*10**(-8)/727, snp = "ID", cex.text = 1.3, genomewideline = -log10(5*10**(-8)/727), suggestiveline = -log10(5e-8))
+  dev.off()
+  }
 
 ##from https://danielroelfs.com/blog/how-i-create-manhattan-plots-using-ggplot/
 ggplot_manhattan <- function(gwas_data, theTitle = "Manhattan Plot", ymin = 4){
@@ -77,6 +115,16 @@ format_gwas <- function(thephenoname){
   data.table(thegwas)
 }
 
+
+list_features <- function(domain){
+  read.csv(system.file("lists",
+                       paste0(domain ,"Loader", ".csv"),
+                       package = "gwasInterface"))[,2]
+
+}
+
+domains_list <- c("CGM", "Ultrasound", "HormonalStatus", "DEXA", "RetinaScan")
+
 ##' Run the McMasterPandemic Shiny
 ##'
 ##' run_shiny() is an example of a single-file Shiny app in that it defines a UI object and a server method to handle that object. A benefit is that Roxygen import tags only need to be called once to become available to the entire shiny, and it's easy to run the shiny as well. After both the ui object and server function are defined, browserManager is called, which sets the viewing environment that the Shiny runs in. Anywhere with a tag$html call is either a CSS or HTML tag to change certain visual aspects of the shiny.  In addition, many ui elements are rendered in the server function and passed to ui with renderUI. RenderHTML is another wrapper for this as well. This lets us make UI elements which depend on input from the UI itself.
@@ -92,7 +140,7 @@ format_gwas <- function(thephenoname){
 ##' @export
 run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
   ui <- fluidPage(theme = shinythemes::shinytheme("flatly"),
-                  h1(id = "heading", "Eran Segal 10K Project Interactive GWAS Results Interface"),
+                  h1(id = "heading", "Eran Segal Human Phenotype Project Interactive GWAS Results Interface"),
                   ##Colour the top and bottom of the page appropriately.
                   tags$style(HTML("#heading {background-color: #0078a4; color: white !important;}")),
                   tags$style(HTML("#sourcelink {background-color: #0078a4; color: white !important;}")),
@@ -112,11 +160,13 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                                        uiOutput("pheno1"),
                                      ),
                                      tabPanel(
-                                       title = "Visualize GWAS Summary Statistics",
+                                       title = "Feature Selection",
                                        value = "summarystatspanel",
-                                       selectInput("pheno",
-                                                   label = "Phenotype:",
-                                                   choices = list_full_gwas_results()),
+                                       selectInput("domain",
+                                                   label= "Feature Domain",
+                                                   choices = domains_list),
+                                       uiOutput("featureSelect")
+                                       ,
                                        uiOutput("gwasDownload")
                                        ))),
                     mainPanel(
@@ -143,7 +193,11 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     output$gwasDownload <- renderUI({
       downloadButton("downloadData", "Download GWAS Summary Statistics", class = "dbutton")
     })
-
+    output$featureSelect <- renderUI({
+      selectInput("pheno",
+                  label = "Phenotype:",
+                  choices = list_features(input$domain))
+    })
     ##Handle downloads for the sample template csv file.
     ##The file is an empty version of ICU1.csv so it scales as more parameters are added.
     output$downloadData <- downloadHandler(
@@ -154,8 +208,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     )
       output$sourcelink <- renderUI({tagList(
       "Source code available at ",
-      a("https://github.com/repo-link", href = "https://github.com/repo-link"),
-      "                                GWAS Repository"
+      a("https://github.com/ZachLevine-11/gwasInterface", href = "https://github.com/ZachLevine-11/gwasInterface"),
+      "                                Based on the paper: Paper title"
     )})
   }
     shinyApp(ui, server)
