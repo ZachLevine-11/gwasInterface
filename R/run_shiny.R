@@ -162,6 +162,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                                        selectInput("domain",
                                                    label= "Feature Domain",
                                                    choices = domains_list),
+                                       h4(id = "t0", "PRS Associations Heatmap (Corrected P)"),
+                                       plotOutput("heatmap"),
                                        uiOutput("featureSelect"),
                                        uiOutput("gwasDownload")
                                        ))),
@@ -192,7 +194,6 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
       output$table <- renderDataTable({
         thegwas <- format_gwas(input$pheno)
         })
-
       output$prs_assoc <- renderDataTable({
         justpheno <- as.numeric(prs_table_loaded[prs_table_loaded$Phenotype == input$pheno,]) ##first two entries are NA corresponding to the index of Loader, Phenotype
         sig_ids <- justpheno < 0.05
@@ -203,6 +204,15 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
         res_table <- tibble("Phenotype" = rep(input$pheno, length(justpheno_sig_P)), "Corrected P Value" = justpheno_sig_P, "Polygenic Risk Score (PRS)" = justpheno_sig_prs_names)
         res_table <- data.table(res_table[order(res_table["Corrected P Value"]), c("Phenotype", "Polygenic Risk Score (PRS)", "Corrected P Value")])
       })
+    })
+
+    observeEvent(input[["domain"]], {
+      output$heatmap <- renderImage({
+        list(src=system.file(paste0("prs_heatmap_imgs/", input$domain, "Loader", ".png"),
+                                          package = "gwasInterface"),
+             width = "80%",
+             height = "100%")
+    }, deleteFile = FALSE)
     })
 
     output$gwasDownload <- renderUI({
