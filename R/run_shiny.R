@@ -184,6 +184,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
   server <- function(input, output, session){
     prs_table_loaded <- readRDS(system.file("prs_assoc_corrected_clinical.Rds",
                                              package = "gwasInterface"))
+    prs_name_dict_loaded <- readRDS(system.file("prs_name_dict.Rds",
+                                            package = "gwasInterface"))
     observeEvent(input[["pheno"]], {
       output$plot <- renderPlot({
         ##Force reactive loading based on these values
@@ -202,7 +204,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
         justpheno_sig_prs_names <- colnames(prs_table_loaded)[sig_ids]
         ##use a tibble so we can have spaces in the column names
         res_table <- tibble("Phenotype" = rep(input$pheno, length(justpheno_sig_P)), "Corrected P Value" = justpheno_sig_P, "Polygenic Risk Score (PRS)" = justpheno_sig_prs_names)
-        res_table <- data.table(res_table[order(res_table["Corrected P Value"]), c("Phenotype", "Polygenic Risk Score (PRS)", "Corrected P Value")])
+        res_table["Corresponding UK Biobank Phenotype Code for PRS"] <- sapply(res_table[["Polygenic Risk Score (PRS)"]], function(thename){prs_name_dict_loaded[prs_name_dict_loaded$name == thename,]$code})
+        res_table <- data.table(res_table[order(res_table["Corrected P Value"]), c("Phenotype", "Polygenic Risk Score (PRS)", "Corresponding UK Biobank Phenotype Code for PRS", "Corrected P Value")])
       })
     })
 

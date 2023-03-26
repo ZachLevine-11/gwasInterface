@@ -5,9 +5,9 @@ account: zacharylevine
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8012892
-bundleId: 6992930
+bundleId: 6993098
 url: https://zacharylevine.shinyapps.io/GWASDashboard/
-when: 1679499419.63697
+when: 1679501315.03287
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: ._.DS_Store
