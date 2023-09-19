@@ -35,6 +35,7 @@ make_paper_figures <- function(){
 make_cnv_manplot <- function(){
   library(qqman)
   res <- read.csv("/net/mraid08/export/jasmine/zach/cnv/ea1c_test_formatted.csv")
+  res$CHR <- as.integer(res$CHR)
   res_add_to_each_chr_start <- sapply(unique(res$CHR), function(chr){res[res$CHR == toString(as.numeric(chr) - 1), "END"][length(res[res$CHR == toString(as.numeric(chr) - 1),])]})
   res_add_to_each_chr_start[is.na(res_add_to_each_chr_start)] <- 0
   res_add_to_each_chr_start <- cumsum(res_add_to_each_chr_start)
