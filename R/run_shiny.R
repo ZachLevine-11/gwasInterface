@@ -10,7 +10,7 @@ list_full_gwas_results <- function(){
 ##' @import fastman
 shiny_manhattan <- function(x, phenoName){
   ##ylims: -log10(5*10**-n) ~ n-1, i.e for 4 put 3
-  fastman::fastman(x, chr = "X.CHROM", bp ="POS", cex.axis = 1, annotatePval =  5*10**(-8)/727, snp = "ID", cex.text = 1.3, genomewideline = -log10(5*10**(-8)/727), suggestiveline = -log10(5e-8), ylim = c(2.5, max(-log10(x$P))), main = phenoName)
+  fastman::fastman(x, chr = "X.CHROM", bp ="POS", cex.axis = 1, annotatePval =  5*10**(-8)/727, snp = "ID", cex.text = 1.3, genomewideline = -log10(5*10**(-8)/727), suggestiveline = -log10(5e-8), ylim = c(min(2.5, min(-log10(x$P))), max(-log10(x$P))), main = phenoName)
 
 }
 
