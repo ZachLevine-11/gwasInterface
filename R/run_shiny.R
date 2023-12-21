@@ -8,8 +8,6 @@ shiny_manhattan <- function(x, phenoName){
 
 }
 
-options_mb <- read.csv(system.file("lists",
-                                     "MicrobiomeLoader.csv",package = "gwasInterface"))
 
 list_features <- function(domain){
   if (domain != "Microbiome"){
@@ -194,6 +192,10 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                                              package = "gwasInterface"))
     prs_name_dict_loaded <- readRDS(system.file("prs_name_dict.Rds",
                                             package = "gwasInterface"))
+    ##do inside the server function or the shiny will break
+    options_mb <- read.csv(system.file("lists",
+                                      "MicrobiomeLoader.csv",package = "gwasInterface"))
+
 
 
     observeEvent(input[["pheno"]], {
