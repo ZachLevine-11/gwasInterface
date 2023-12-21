@@ -1,9 +1,3 @@
-##Supports stand alone calling in package
-list_full_gwas_results <- function(){
-   read.csv(system.file("lists",
-                        "full_results_file_list.csv",
-                        package = "gwasInterface"))[,2]
-}
 
 
 ##' @export
@@ -14,11 +8,65 @@ shiny_manhattan <- function(x, phenoName){
 
 }
 
+options_mb <-   read.csv(system.file("lists",
+                                     "mb_options.csv",
+                                     package = "gwasInterface"))
+list_kingdom <- function(){
+  c(unique(options_mb$kingdom))
+
+}
+list_phylum <- function(kingdom){
+  print(kingdom)
+  unique(options_mb[options_mb$kingdom == kingdom, "phylum"])
+}
+list_class <- function(kingdom, phylum){
+  temp <- options_mb[options_mb$kingdom == kingdom,]
+  unique(temp[temp$phylum == phylum, "class"])
+
+}
+list_order <- function(kingdom, phylum, class){
+  temp <- options_mb[options_mb$kingdom == kingdom,]
+  temp2 <- temp[temp$phylum == phylum,]
+  unique(temp2[temp2$class == "class","order"])
+}
+list_family <- functiony <- function(kingdom,phylum, class, order){
+  temp <- options_mb[options_mb$kingdom == kingdom,]
+  temp2 <- temp[temp$phylum == phylum,]
+  temp3 <- temp2[temp2$class == class,]
+  unique(temp[temp$order == order, "family"])
+}
+list_genus <- function(kingdom, phylum, class, order, family){
+  temp <- options_mb[options_mb$kingdom == kingdom,]
+  temp2 <- temp[temp$phylum == phylum,]
+  temp3 <- temp2[temp2$class == class,]
+  temp4 <- temp3[temp$order == order,]
+  unique(temp4[temp4$family == family, "genus"])
+
+}
+list_species <- function(kingdom, phylum, class,order, family, genus){
+  temp <- options_mb[options_mb$kingdom == kingdom,]
+  temp2 <- temp[temp$phylum == phylum,]
+  temp3 <- temp2[temp2$class == class,]
+  temp4 <- temp3[temp$order == order,]
+  temp5 <- temp4[temp4$family == family,]
+  unique(temp5[temp5$genus == genus, "species"])
+}
+
+find_fname <- function(kingdom, phylum, class,order, family, genus, species){
+  temp <- options_mb[options_mb$kingdom == kingdom,]
+  temp2 <- temp[temp$phylum == phylum,]
+  temp3 <- temp2[temp2$class == class,]
+  temp4 <- temp3[temp$order == order,]
+  temp5 <- temp4[temp4$family == family,]
+  temp6<- (temp5[temp5$genus == genus,])
+  temp6[[temp5$species == species,"X"]]
+  }
+
+
 list_features <- function(domain){
   read.csv(system.file("lists",
                        paste0(domain ,"Loader", ".csv"),
                        package = "gwasInterface"))[,2]
-
 }
 
 make_paper_figures <- function(){
@@ -122,7 +170,7 @@ format_gwas <- function(thephenoname){
   data.table(thegwas)
 }
 
-domains_list <- c("CGM", "Ultrasound", "HormonalStatus", "DEXA", "RetinaScan")
+domains_list <- c("CGM", "Ultrasound", "HormonalStatus", "DEXA", "RetinaScan", "Metabolomics", "Microbiome")
 
 ##' Run the GWASInterface Shiny
 ##'
@@ -166,6 +214,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                                        h4(id = "t0", "PRS Associations Heatmap (Corrected P)"),
                                        plotOutput("heatmap"),
                                        uiOutput("featureSelect"),
+                                       uiOutput("aux_featureSelect"),
                                        uiOutput("gwasDownload")
                                        ))),
                     mainPanel(
@@ -190,8 +239,15 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     observeEvent(input[["pheno"]], {
       output$plot <- renderPlot({
         ##Force reactive loading based on these values
-        shiny_manhattan(readRDS(system.file(paste0("full_results_rds/", input$pheno, ".Rds"),
-                                 package = "gwasInterface")), input$pheno)
+        if (input$domain == "Microbiome"){
+          actual_pheno_fname = find_fname <-find_fname(input$kingdom, input$phylum, input$class,input$order, input$family, input$genus,input$species)
+          shiny_manhattan(readRDS(system.file(paste0("full_results_rds/",actual_pheno_fname, ".Rds"),
+                                              package = "gwasInterface")), input$pheno)
+        }
+        else{
+          shiny_manhattan(readRDS(system.file(paste0("full_results_rds/", input$pheno, ".Rds"),
+                                              package = "gwasInterface")), input$pheno)
+        }
         })
 
       output$table <- renderDataTable({
@@ -211,22 +267,52 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     })
 
     observeEvent(input[["domain"]], {
-      output$heatmap <- renderImage({
-        list(src=system.file(paste0("prs_heatmap_imgs/", input$domain, "Loader", ".png"),
-                                          package = "gwasInterface"),
-             width = "80%",
-             height = "100%")
-    }, deleteFile = FALSE)
+        output$heatmap <- renderImage({
+          list(src=system.file(paste0("prs_heatmap_imgs/", input$domain, "Loader", ".png"),
+                               package = "gwasInterface"),
+               width = "80%",
+               height = "100%")
+        }, deleteFile = FALSE)
     })
 
     output$gwasDownload <- renderUI({
       downloadButton("downloadData", "Download GWAS Summary Statistics", class = "dbutton")
     })
     output$featureSelect <- renderUI({
-      selectInput("pheno",
-                  label = "Phenotype:",
-                  choices = list_features(input$domain))
+      if (input$domain != "Microbiome"){
+
+      }
+
     })
+    output$aux_featureSelect <- renderUI({
+        if (input$domain == "Microbiome"){
+        selectInput("kingdom",
+                    label = "Kingdom:",
+                    choices = list_kingdom(),
+                    selected = "Bacteria")
+          selectInput("phylum",
+                      label = "Phylum:",
+                      choices = list_phylum(input$kingdom))
+
+
+        selectInput("class",
+                    label = "Class:",
+                    choices = list_class(input$kingdom, input$phylum))
+        selectInput("order",
+                    label = "Order:",
+                    choices = list_order(input$kingdom, input$phylum, input$class))
+        selectInput("family",
+                    label = "Family:",
+                    choices = list_family(input$kingdom, input$phylum, input$class, input$order))
+        selectInput("genus",
+                    label = "Genus:",
+                    choices = list_genus(input$kingdom, input$phylum, input$class, input$order, input$family))
+        selectInput("species",
+                    label = "Species:",
+                    choices = list_species(input$kingdom, input$phylum, input$class, input$order, input$family, input$genus))
+        }
+      })
+
     ##Handle downloads for the sample template csv file.
     ##The file is an empty version of ICU1.csv so it scales as more parameters are added.
     output$downloadData <- downloadHandler(
