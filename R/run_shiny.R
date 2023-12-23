@@ -110,7 +110,7 @@ read_clumped <- function(fname){
   read_in$CHR <- as.numeric(read_in$CHR)
   read_in$"F" <- as.numeric(read_in$"F")
   read_in$BP <- as.numeric(read_in$BP)
-  read_in$P <- as.numeric(read_in$P)#
+  read_in$P <- as.numeric(read_in$P)
   read_in
 }
 
@@ -127,7 +127,7 @@ format_gwas <- function(thephenoname, domain, options_mb){
   data.table(thegwas)
 }
 
-domains_list <- c("CGM", "Ultrasound", "HormonalStatus", "DEXA", "RetinaScan", "Metabolomics", "Microbiome")
+domains_list <- c("CGM", "Ultrasound", "HormonalStatus", "DEXA", "RetinaScan", "Microbiome")
 
 ##' Run the GWASInterface Shiny
 ##'
@@ -168,8 +168,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                                        selectInput("domain",
                                                    label= "Feature Domain",
                                                    choices = domains_list),
-                                       h4(id = "t0", "PRS Associations Heatmap (Corrected P)"),
-                                       plotOutput("heatmap"),
+                                       uiOutput("prs_heatmap_title_maybe"),
+                                       uiOutput("maybe_heatmap"),
                                        uiOutput("featureSelect"),
                                        uiOutput("gwasDownload"),
                                        ))),
@@ -177,8 +177,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                         h3(id = "t1", "Manhattan Plot of GWAS Results"),
                         plotOutput("plot", width  = "100%"),
                         ##Colour the top and bottom of the page appropriately.
-                        h3(id = "t2", "Top Multi-SNP Significant PRS Associations"),
-                        dataTableOutput("prs_assoc"),
+                        htmlOutput("prs_assoc_title_maybe"),
+                        dataTableOutput("prs_assoc_maybe"),
                         h3(id = "t3", "Interactive Table of GWAS Results"),
                         dataTableOutput("table")
                     )
@@ -218,9 +218,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
       output$table <- renderDataTable({
         thegwas <- format_gwas(input$pheno, input$domain, options_mb)
         })
-      output$prs_assoc <- renderDataTable({
-        if (input$domain == "Metabolomics" | input$domain == "Microbiome"){
-          res_table <- data.table()
+      output$prs_assoc_maybe <- renderDataTable(
+        if (input$domain == "Microbiome"){
         }
         else{
           justpheno <- as.numeric(prs_table_loaded[prs_table_loaded$Phenotype == input$pheno,]) ##first two entries are NA corresponding to the index of Loader, Phenotype
@@ -233,30 +232,23 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
           res_table["Corresponding UK Biobank Phenotype Code for PRS"] <- sapply(res_table[["Polygenic Risk Score (PRS)"]], function(thename){prs_name_dict_loaded[prs_name_dict_loaded$name == thename,]$code})
           res_table <- data.table(res_table[order(res_table["Corrected P Value"]), c("Phenotype", "Polygenic Risk Score (PRS)", "Corresponding UK Biobank Phenotype Code for PRS", "Corrected P Value")])
         }
-      })
-    })
-
-    observeEvent(input[["domain"]], {
-      if (input$domain != "Metabolomics" & input$domain != "Microbiome"){
-        output$heatmap <- renderImage({
-          list(src=system.file(paste0("prs_heatmap_imgs/", input$domain, "Loader", ".png"),
-                               package = "gwasInterface"),
-               width = "80%",
-               height = "100%")
-        }, deleteFile = FALSE)
-      }
-      else{
-        output$heatmap <- renderImage({
-          list(src=system.file(paste0("prs_heatmap_imgs/", input$domain, "Loader", ".png"),
-                               package = "gwasInterface"),
-               width = "0%",
-               height = "0%")
-        }, deleteFile = FALSE)
-      }
+      )
     })
 
     output$gwasDownload <- renderUI({
       downloadButton("downloadData", "Download GWAS Summary Statistics", class = "dbutton")
+    })
+    output$maybe_heatmap <- renderUI({
+      if (input$domain == "Microbiome"){
+      }
+      else{
+        renderImage({
+          list(src=system.file(paste0("prs_heatmap_imgs/", input$domain, "Loader", ".png"),
+                               package = "gwasInterface"),
+               width = "100%",
+               height = "100%")
+        }, deleteFile = FALSE)
+      }
     })
 
 
@@ -267,7 +259,23 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
                   selected = list_features(input$domain, options_mb)[2])
 
     })
+    output$prs_assoc_title_maybe <- renderUI({
+      if (input$domain == "Microbiome"){
 
+      }
+      else{
+        h3(id = "t2", "Top Multi-SNP Significant PRS Associations")
+      }
+    })
+
+    output$prs_heatmap_title_maybe <- renderUI({
+      if (input$domain == "Microbiome"){
+
+      }
+      else{
+        h4(id = "t0", "PRS Associations Heatmap (Corrected P)")
+      }
+    })
     ##Handle downloads
     output$downloadData <- downloadHandler(
       filename = function(){
