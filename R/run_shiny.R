@@ -110,7 +110,7 @@ read_clumped <- function(fname){
   read_in$CHR <- as.numeric(read_in$CHR)
   read_in$"F" <- as.numeric(read_in$"F")
   read_in$BP <- as.numeric(read_in$BP)
-  read_in$P <- as.numeric(read_in$P)
+  read_in$P <- as.numeric(read_in$P)#
   read_in
 }
 
