@@ -9,7 +9,7 @@ shiny_manhattan <- function(x, phenoName){
 }
 
 
-list_features <- function(domain){
+list_features <- function(domain, options_mb){
   if (domain != "Microbiome"){
     read.csv(system.file("lists",
                          paste0(domain ,"Loader", ".csv"),
@@ -114,7 +114,7 @@ read_clumped <- function(fname){
   read_in
 }
 
-format_gwas <- function(thephenoname, domain){
+format_gwas <- function(thephenoname, domain, options_mb){
   if (domain == "Microbiome"){
     thephenoname <- paste0(options_mb[options_mb$species == thephenoname, "ok"], ".glm.linear")
   }
@@ -216,7 +216,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
         })
 
       output$table <- renderDataTable({
-        thegwas <- format_gwas(input$pheno, input$domain)
+        thegwas <- format_gwas(input$pheno, input$domain, options_mb)
         })
       output$prs_assoc <- renderDataTable({
         if (input$domain == "Metabolomics" | input$domain == "Microbiome"){
@@ -263,8 +263,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
     output$featureSelect <- renderUI({
       selectInput("pheno",
                   label = "Phenotype:",
-                  choices = list_features(input$domain),
-                  selected = list_features(input$domain)[2])
+                  choices = list_features(input$domain, options_mb),
+                  selected = list_features(input$domain, options_mb)[2])
 
     })
 
@@ -279,7 +279,7 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
         }
       },
       content = function(file) {
-      write.csv(format_gwas(input$pheno, input$domain), file, row.names = FALSE)
+      write.csv(format_gwas(input$pheno, input$domain, options_mb), file, row.names = FALSE)
       }
     )
       output$sourcelink <- renderUI({tagList(
