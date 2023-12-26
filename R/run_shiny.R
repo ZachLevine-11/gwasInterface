@@ -245,8 +245,8 @@ run_shiny <- function(useBrowser = TRUE, usingOnline = FALSE) {
         renderImage({
           list(src=system.file(paste0("prs_heatmap_imgs/", input$domain, "Loader", ".png"),
                                package = "gwasInterface"),
-               width = "100%",
-               height = "100%")
+               width = "400px", #keep square or the image will look stretched
+               height = "400px")
         }, deleteFile = FALSE)
       }
     })
